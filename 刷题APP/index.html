@@ -3909,7 +3909,13 @@ async function autoSyncPull() {
   try {
     const cfg = getJSONBinConfig();
     const response = await fetch(`${JSONBIN_API}/b/${cfg.binId}/latest`, {
-      headers: { 'X-Master-Key': cfg.apiKey }
+      method: 'GET',
+      headers: {
+        'X-Master-Key': cfg.apiKey,
+        'Content-Type': 'application/json'
+      },
+      mode: 'cors',
+      cache: 'no-cache'
     });
 
     if (!response.ok) {
@@ -3966,6 +3972,7 @@ function autoSyncPush() {
           'Content-Type': 'application/json',
           'X-Master-Key': cfg.apiKey
         },
+        mode: 'cors',
         body: JSON.stringify(payload)
       });
 
@@ -4006,7 +4013,13 @@ async function manualSyncNow() {
     const cfg = getJSONBinConfig();
     // 先拉取云端数据
     const pullRes = await fetch(`${JSONBIN_API}/b/${cfg.binId}/latest`, {
-      headers: { 'X-Master-Key': cfg.apiKey }
+      method: 'GET',
+      headers: {
+        'X-Master-Key': cfg.apiKey,
+        'Content-Type': 'application/json'
+      },
+      mode: 'cors',
+      cache: 'no-cache'
     });
     if (pullRes.ok) {
       const pullData = await pullRes.json();
@@ -4024,6 +4037,7 @@ async function manualSyncNow() {
         'Content-Type': 'application/json',
         'X-Master-Key': cfg.apiKey
       },
+      mode: 'cors',
       body: JSON.stringify(payload)
     });
 
