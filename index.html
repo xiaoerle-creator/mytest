@@ -4020,6 +4020,10 @@ async function autoSyncPull() {
       const newGistId = await createGist(cfg.token, payload);
       saveGistConfig(cfg.token, newGistId);
       showSyncStatus('✅ 已创建新的同步 Gist', 'success');
+      SYNC_STATE.pullDone = true;
+      SYNC_STATE.lastPullTime = Date.now();
+      SYNC_STATE.isSyncing = false;
+      return;
     } else {
       cloudData = await pullFromGist(cfg.token, cfg.gistId);
       
@@ -4101,6 +4105,19 @@ async function manualSyncNow() {
 
   try {
     const cfg = getGistConfig();
+    
+    // 如果没有 Gist ID，先创建
+    if (!cfg.gistId) {
+      const payload = getSyncPayload();
+      const newGistId = await createGist(cfg.token, payload);
+      saveGistConfig(cfg.token, newGistId);
+      showSyncStatus('✅ 已创建新的同步 Gist', 'success');
+      SYNC_STATE.lastPullTime = Date.now();
+      SYNC_STATE.lastPushTime = Date.now();
+      SYNC_STATE.isSyncing = false;
+      return;
+    }
+    
     // 先拉取云端数据
     const cloudData = await pullFromGist(cfg.token, cfg.gistId);
     if (cloudData && (cloudData.answerHistory || cloudData.answerHistory_dingxin)) {
