@@ -1766,11 +1766,11 @@ textarea.api-input {
       </div>
       <div class="card-body">
 
-        <!-- 在线自动同步（坚果云WebDAV） -->
+        <!-- 在线自动同步（JSONBin.io） -->
         <div style="margin-bottom:16px">
           <div style="font-size:14px;font-weight:700;color:var(--gray-800);margin-bottom:6px">☁️ 云端自动同步</div>
           <div style="font-size:12px;color:var(--gray-500);margin-bottom:10px;line-height:1.6">
-            使用坚果云WebDAV同步数据。配置账号后，打开APP自动拉取，答题后自动上传。
+            使用 JSONBin.io 同步数据。配置 API Key 后，打开APP自动拉取，答题后自动上传。
           </div>
           <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px">
             <button class="btn btn-primary btn-sm" onclick="manualSyncNow()">🔄 立即同步</button>
@@ -1778,24 +1778,25 @@ textarea.api-input {
           </div>
           <div id="sync-status" style="margin-top:10px;font-size:13px"></div>
 
-          <!-- 坚果云 WebDAV 配置（折叠） -->
+          <!-- JSONBin 配置（折叠） -->
           <div id="sync-config-panel" style="display:none;margin-top:12px;background:var(--gray-50);border-radius:8px;padding:12px;border:1px solid var(--gray-200)">
             <div style="font-size:12px;color:var(--gray-600);margin-bottom:10px;line-height:1.7">
-              使用 <strong>坚果云 WebDAV</strong> 进行云同步（支持 GitHub Pages）：
-              <br>1. 前往 <a href="https://www.jianguoyun.com/" target="_blank">坚果云</a> 注册账号
-              <br>2. 在「安全选项」→「第三方应用管理」中开启 WebDAV
-              <br>3. 应用密码 = WebDAV 密码（不是登录密码）
+              使用 <strong>JSONBin.io</strong> 进行云同步：
+              <br>1. 前往 <a href="https://jsonbin.io/" target="_blank">jsonbin.io</a> 注册账号
+              <br>2. 在 API Keys 页面获取 Master Key
+              <br>3. 填入下方 Key 即可（Bin ID 会自动创建）
             </div>
-            <div style="margin-bottom:8px">
-              <label style="font-size:12px;color:var(--gray-600);display:block;margin-bottom:4px">坚果云账号（邮箱）</label>
-              <input id="webdav-username" type="text" class="api-input" placeholder="your@email.com" style="font-size:12px;font-family:monospace" oninput="saveWebDAVConfigFromUI()">
+
+            <div style="margin-bottom:10px">
+              <label style="font-size:12px;color:var(--gray-600);display:block;margin-bottom:4px">JSONBin API Key</label>
+              <input id="jsonbin-apikey" type="text" class="api-input" placeholder="粘贴你的 Master Key（$2a$10$...）" style="font-size:12px;font-family:monospace" oninput="saveJSONBinConfigFromUI()">
             </div>
             <div style="margin-bottom:10px">
-              <label style="font-size:12px;color:var(--gray-600);display:block;margin-bottom:4px">应用密码</label>
-              <input id="webdav-password" type="password" class="api-input" placeholder="在坚果云安全选项中获取" style="font-size:12px;font-family:monospace" oninput="saveWebDAVConfigFromUI()">
+              <label style="font-size:12px;color:var(--gray-600);display:block;margin-bottom:4px">Bin ID（自动创建，也可手动填写已有ID）</label>
+              <input id="jsonbin-binid" type="text" class="api-input" placeholder="自动创建，或填写已有 Bin ID" style="font-size:12px;font-family:monospace" oninput="saveJSONBinConfigFromUI()">
             </div>
             <div style="display:flex;gap:8px">
-              <button class="btn btn-danger btn-sm" onclick="clearWebDAVConfig()">🗑️ 清除配置</button>
+              <button class="btn btn-danger btn-sm" onclick="clearJSONBinConfig()">🗑️ 清除配置</button>
             </div>
             <div id="sync-config-status" style="margin-top:8px;font-size:12px;color:var(--gray-500)"></div>
           </div>
@@ -1878,8 +1879,8 @@ textarea.api-input {
 </div>
 
 <!-- 引入题目数据 -->
-<script src="刷题APP/questions_data.js?v=20260408v4"></script>
-<script src="刷题APP/questions_data_new.js?v=20260411v1"></script>
+<script src="questions_data.js?v=20260408v4"></script>
+<script src="questions_data_new.js?v=20260411v1"></script>
 
 <script>
 // ============================================================
@@ -3738,128 +3739,163 @@ function updateAIType() {
   baseUrlRow.style.display = (t === 'custom' || t === 'qwen') ? 'block' : 'none';
 }
 
-// ========== 数据同步（坚果云 WebDAV）==========
+// ========== 数据同步（JSONBin.io）==========
 
-const JIANGUOYUN_API = 'https://dav.jianguoyun.com/dav';
-const SYNC_FILE_NAME = 'zhuzhibiguo-sync.json';
+const JSONBIN_API = 'https://api.jsonbin.io/v3';
+const JSONBIN_BIN_NAME = 'zhuzhibiguo-sync';
 
-// 获取 WebDAV 配置
-function getWebDAVConfig() {
-  return DB.get('webdavConfig', {
-    server: 'https://dav.jianguoyun.com/dav',
-    username: '',
-    password: '',
-    enabled: false
+// 获取 JSONBin 配置（已内置 API Key 和 Bin ID）
+function getJSONBinConfig() {
+  return DB.get('jsonbinConfig', {
+    apiKey: '$2a$10$OpuDazWjrN3AYKcG9kK01.eW0UZNFElG2u5L8BAxdM3a/uURZEu8S',
+    binId: '69d311b936566621a8819078',
+    enabled: true
   });
 }
 
-// 保存 WebDAV 配置
-function saveWebDAVConfig(config) {
-  DB.set('webdavConfig', config);
+// 保存 JSONBin 配置
+function saveJSONBinConfig(config) {
+  DB.set('jsonbinConfig', config);
 }
 
-// 检查是否已配置 WebDAV
+// 检查是否已配置 JSONBin
+function isJSONBinConfigured() {
+  const cfg = getJSONBinConfig();
+  return cfg.enabled && cfg.apiKey;
+}
+
+// 兼容旧代码中的 isWebDAVConfigured 调用
 function isWebDAVConfigured() {
-  const cfg = getWebDAVConfig();
-  return cfg.enabled && cfg.username && cfg.password;
+  return isJSONBinConfigured();
 }
 
-// WebDAV 基本认证头
-function getWebDAVAuth(cfg) {
-  return 'Basic ' + btoa(cfg.username + ':' + cfg.password);
-}
+// 从 JSONBin 拉取数据
+async function pullFromJSONBin(cfg) {
+  if (!cfg.binId) return null;
 
-// 从 WebDAV 拉取数据
-async function pullFromWebDAV(cfg) {
-  const url = cfg.server + '/' + SYNC_FILE_NAME;
+  const url = JSONBIN_API + '/b/' + cfg.binId + '/latest';
   const response = await fetch(url, {
     method: 'GET',
     headers: {
-      'Authorization': getWebDAVAuth(cfg)
+      'X-Master-Key': cfg.apiKey,
+      'X-Bin-Meta': 'false'
     }
   });
-  
+
   if (response.status === 404) {
-    return null; // 文件不存在
+    return null;
   }
-  
+
   if (!response.ok) {
-    throw new Error(`拉取失败: HTTP ${response.status}`);
+    throw new Error('拉取失败: HTTP ' + response.status);
   }
-  
+
   const content = await response.text();
   return content ? JSON.parse(content) : null;
 }
 
-// 推送数据到 WebDAV
-async function pushToWebDAV(cfg, data) {
-  const url = cfg.server + '/' + SYNC_FILE_NAME;
+// 兼容旧代码中的 pullFromWebDAV 调用
+async function pullFromWebDAV() {
+  const cfg = getJSONBinConfig();
+  return pullFromJSONBin(cfg);
+}
+
+// 推送数据到 JSONBin（有 binId 则更新，无则创建）
+async function pushToJSONBin(cfg, data) {
+  let url, method;
+
+  if (cfg.binId) {
+    // 更新已有 bin
+    url = JSONBIN_API + '/b/' + cfg.binId;
+    method = 'PUT';
+  } else {
+    // 创建新 bin
+    url = JSONBIN_API + '/b';
+    method = 'POST';
+  }
+
   const response = await fetch(url, {
-    method: 'PUT',
+    method: method,
     headers: {
-      'Authorization': getWebDAVAuth(cfg),
-      'Content-Type': 'application/json'
+      'Content-Type': 'application/json',
+      'X-Master-Key': cfg.apiKey,
+      'X-Bin-Name': JSONBIN_BIN_NAME,
+      'X-Bin-Private': 'true'
     },
     body: JSON.stringify(data, null, 2)
   });
-  
+
   if (!response.ok) {
-    throw new Error(`推送失败: HTTP ${response.status}`);
+    throw new Error('推送失败: HTTP ' + response.status);
   }
-  
+
+  // 如果是新创建的 bin，保存 binId
+  if (!cfg.binId) {
+    const result = await response.json();
+    if (result.metadata && result.metadata.id) {
+      cfg.binId = result.metadata.id;
+      saveJSONBinConfig(cfg);
+    }
+  }
+
   return true;
 }
 
-// 折叠/展开 WebDAV 配置面板
+// 兼容旧代码中的 pushToWebDAV 调用
+async function pushToWebDAV(data) {
+  const cfg = getJSONBinConfig();
+  return pushToJSONBin(cfg, data);
+}
+
+// 折叠/展开 JSONBin 配置面板
 function toggleSyncConfigPanel() {
   const panel = document.getElementById('sync-config-panel');
   const isHidden = panel.style.display === 'none';
   panel.style.display = isHidden ? 'block' : 'none';
   if (isHidden) {
-    const cfg = getWebDAVConfig();
-    document.getElementById('webdav-username').value = cfg.username || '';
-    document.getElementById('webdav-password').value = cfg.password || '';
+    const cfg = getJSONBinConfig();
+    document.getElementById('jsonbin-apikey').value = cfg.apiKey || '';
+    document.getElementById('jsonbin-binid').value = cfg.binId || '';
     updateSyncConfigStatus();
   }
 }
 
-// 从 UI 保存 WebDAV 配置
-function saveWebDAVConfigFromUI() {
-  const username = document.getElementById('webdav-username').value.trim();
-  const password = document.getElementById('webdav-password').value.trim();
-  saveWebDAVConfig({
-    server: 'https://dav.jianguoyun.com/dav',
-    username: username,
-    password: password,
-    enabled: !!(username && password)
+// 从 UI 保存 JSONBin 配置
+function saveJSONBinConfigFromUI() {
+  const apiKey = document.getElementById('jsonbin-apikey').value.trim();
+  const binId = document.getElementById('jsonbin-binid').value.trim();
+  saveJSONBinConfig({
+    apiKey: apiKey,
+    binId: binId,
+    enabled: !!apiKey
   });
   updateSyncConfigStatus();
 }
 
-// 清除 WebDAV 配置
-function clearWebDAVConfig() {
-  saveWebDAVConfig({
-    server: 'https://dav.jianguoyun.com/dav',
-    username: '',
-    password: '',
+// 清除 JSONBin 配置
+function clearJSONBinConfig() {
+  saveJSONBinConfig({
+    apiKey: '',
+    binId: '',
     enabled: false
   });
-  document.getElementById('webdav-username').value = '';
-  document.getElementById('webdav-password').value = '';
+  document.getElementById('jsonbin-apikey').value = '';
+  document.getElementById('jsonbin-binid').value = '';
   updateSyncConfigStatus();
-  showToast('✅ 已清除配置');
+  showToast('已清除配置');
 }
 
 // 更新配置状态显示
 function updateSyncConfigStatus() {
   const statusEl = document.getElementById('sync-config-status');
   if (!statusEl) return;
-  if (isWebDAVConfigured()) {
-    const cfg = getWebDAVConfig();
-    const maskedUser = cfg.username.substring(0, 3) + '***';
-    statusEl.innerHTML = `<span style="color:var(--success)">✅ 已配置 · ${maskedUser}</span>`;
+  const cfg = getJSONBinConfig();
+  if (isJSONBinConfigured()) {
+    const maskedKey = cfg.apiKey.substring(0, 8) + '...';
+    const binInfo = cfg.binId ? 'Bin: ' + cfg.binId.substring(0, 8) + '...' : 'Bin: 待创建';
+    statusEl.innerHTML = '<span style="color:var(--success)">✅ 已配置 · ' + maskedKey + ' · ' + binInfo + '</span>';
   } else {
-    statusEl.innerHTML = '<span style="color:var(--warning)">⚠️ 请先配置坚果云账号</span>';
+    statusEl.innerHTML = '<span style="color:var(--warning)">⚠️ 请先配置 JSONBin API Key</span>';
   }
 }
 
@@ -3972,22 +4008,22 @@ function mergeCloudData(cloudData) {
 // 从云端拉取数据（APP打开时自动调用）
 async function autoSyncPull() {
   if (SYNC_STATE.isSyncing) return;
-  if (!isWebDAVConfigured()) {
-    showSyncStatus('⚠️ 请先配置坚果云账号', 'warning');
+  if (!isJSONBinConfigured()) {
+    showSyncStatus('⚠️ 请先配置 JSONBin API Key', 'warning');
     return;
   }
   SYNC_STATE.isSyncing = true;
 
   try {
-    const cfg = getWebDAVConfig();
-    const cloudData = await pullFromWebDAV(cfg);
+    const cfg = getJSONBinConfig();
+    const cloudData = await pullFromJSONBin(cfg);
     
     if (cloudData && ((cloudData.answerHistory && Object.keys(cloudData.answerHistory).length > 0)
         || (cloudData.answerHistory_dingxin && Object.keys(cloudData.answerHistory_dingxin).length > 0))) {
       mergeCloudData(cloudData);
       const ptCount = Object.keys(DB.get('answerHistory', {})).length;
       const dxCount = Object.keys(DB.get('answerHistory_dingxin', {})).length;
-      showSyncStatus(`✅ 云端已同步：白金卷 ${ptCount} 题 / 定心卷 ${dxCount} 题`, 'success');
+      showSyncStatus('✅ 云端已同步：白金卷 ' + ptCount + ' 题 / 定心卷 ' + dxCount + ' 题', 'success');
       // 合并后将结果上传（距上次push超过60秒才执行）
       const now = Date.now();
       if (!SYNC_STATE.lastPushTime || now - SYNC_STATE.lastPushTime > 60000) {
@@ -4017,14 +4053,14 @@ function autoSyncPush() {
   SYNC_STATE.pendingPush = setTimeout(async () => {
     if (SYNC_STATE.isSyncing) return;
     
-    const cfg = getWebDAVConfig();
-    if (!cfg.enabled || !cfg.username || !cfg.password) return;
+    const cfg = getJSONBinConfig();
+    if (!cfg.enabled || !cfg.apiKey) return;
     
     SYNC_STATE.isSyncing = true;
 
     try {
       const payload = getSyncPayload();
-      await pushToWebDAV(cfg, payload);
+      await pushToJSONBin(cfg, payload);
 
       SYNC_STATE.lastPushTime = Date.now();
       // 更新同步页面状态
@@ -4052,25 +4088,25 @@ async function manualSyncNow() {
     showToast('⏳ 正在同步中...');
     return;
   }
-  if (!isWebDAVConfigured()) {
-    showSyncStatus('⚠️ 请先配置坚果云账号', 'warning');
+  if (!isJSONBinConfigured()) {
+    showSyncStatus('⚠️ 请先配置 JSONBin API Key', 'warning');
     return;
   }
   SYNC_STATE.isSyncing = true;
   showSyncStatus('⏳ 正在同步...', 'info');
 
   try {
-    const cfg = getWebDAVConfig();
+    const cfg = getJSONBinConfig();
     
     // 先拉取云端数据
-    const cloudData = await pullFromWebDAV(cfg);
+    const cloudData = await pullFromJSONBin(cfg);
     if (cloudData && (cloudData.answerHistory || cloudData.answerHistory_dingxin)) {
       mergeCloudData(cloudData);
     }
 
     // 上传当前数据
     const payload = getSyncPayload();
-    await pushToWebDAV(cfg, payload);
+    await pushToJSONBin(cfg, payload);
 
     SYNC_STATE.lastPullTime = Date.now();
     SYNC_STATE.lastPushTime = Date.now();
