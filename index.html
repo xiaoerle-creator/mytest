@@ -4062,12 +4062,35 @@ function autoSyncPush() {
   // 30秒防抖：连续答题只上传一次，避免触发免费套餐频率限制
   SYNC_STATE.pendingPush = setTimeout(async () => {
     if (SYNC_STATE.isSyncing) return;
+    
+    const cfg = getGistConfig();
+    if (!cfg.token) return;
+    
+    // 如果没有 Gist ID，先创建
+    if (!cfg.gistId) {
+      try {
+        SYNC_STATE.isSyncing = true;
+        const payload = getSyncPayload();
+        const newGistId = await createGist(cfg.token, payload);
+        saveGistConfig(cfg.token, newGistId);
+        SYNC_STATE.lastPushTime = Date.now();
+        console.log('[自动同步] 已创建新 Gist:', newGistId);
+        const statusEl = document.getElementById('sync-status');
+        if (statusEl) {
+          statusEl.innerHTML = `<span style="color:var(--success)">✅ 已创建云端同步 · ${formatSyncTime(Date.now())}</span>`;
+        }
+      } catch (err) {
+        console.warn('[自动同步] 创建 Gist 失败:', err.message);
+      } finally {
+        SYNC_STATE.isSyncing = false;
+      }
+      return;
+    }
+    
     SYNC_STATE.isSyncing = true;
 
     try {
       const payload = getSyncPayload();
-      const cfg = getGistConfig();
-
       await pushToGist(cfg.token, cfg.gistId, payload);
 
       SYNC_STATE.lastPushTime = Date.now();
