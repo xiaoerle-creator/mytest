@@ -1786,6 +1786,29 @@ textarea.api-input {
               <br>2. 在「安全选项」→「第三方应用管理」中开启 WebDAV
               <br>3. 应用密码 = WebDAV 密码（不是登录密码）
             </div>
+
+            <!-- 预置账号提示 -->
+            <div style="background:linear-gradient(135deg,#dbeafe 0%,#dcfce7 100%);border-radius:8px;padding:10px;margin-bottom:12px;border:1px dashed #2563eb">
+              <div style="font-size:12px;font-weight:700;color:#1e40af;margin-bottom:6px">📋 快速配置（点击复制）</div>
+              <div style="display:flex;flex-direction:column;gap:6px">
+                <div style="display:flex;align-items:center;gap:8px">
+                  <span style="font-size:12px;color:var(--gray-600);white-space:nowrap">服务器：</span>
+                  <code id="preset-server" style="flex:1;background:#fff;padding:4px 8px;border-radius:4px;font-size:12px;font-family:monospace;color:var(--gray-800);border:1px solid var(--gray-200)">https://dav.jianguoyun.com/dav/</code>
+                  <button class="btn btn-sm" style="padding:4px 10px;font-size:11px;background:#2563eb;color:white;border:none;border-radius:4px" onclick="copyPreset('preset-server')">复制</button>
+                </div>
+                <div style="display:flex;align-items:center;gap:8px">
+                  <span style="font-size:12px;color:var(--gray-600);white-space:nowrap">账号：</span>
+                  <code id="preset-username" style="flex:1;background:#fff;padding:4px 8px;border-radius:4px;font-size:12px;font-family:monospace;color:var(--gray-800);border:1px solid var(--gray-200)">812324060@qq.com</code>
+                  <button class="btn btn-sm" style="padding:4px 10px;font-size:11px;background:#2563eb;color:white;border:none;border-radius:4px" onclick="copyPreset('preset-username')">复制</button>
+                </div>
+                <div style="display:flex;align-items:center;gap:8px">
+                  <span style="font-size:12px;color:var(--gray-600);white-space:nowrap">密码：</span>
+                  <code id="preset-password" style="flex:1;background:#fff;padding:4px 8px;border-radius:4px;font-size:12px;font-family:monospace;color:var(--gray-800);border:1px solid var(--gray-200)">a45w6eebn8n2nvhx</code>
+                  <button class="btn btn-sm" style="padding:4px 10px;font-size:11px;background:#2563eb;color:white;border:none;border-radius:4px" onclick="copyPreset('preset-password')">复制</button>
+                </div>
+              </div>
+            </div>
+
             <div style="margin-bottom:8px">
               <label style="font-size:12px;color:var(--gray-600);display:block;margin-bottom:4px">坚果云账号（邮箱）</label>
               <input id="webdav-username" type="text" class="api-input" placeholder="your@email.com" style="font-size:12px;font-family:monospace" oninput="saveWebDAVConfigFromUI()">
@@ -3848,6 +3871,35 @@ function clearWebDAVConfig() {
   document.getElementById('webdav-password').value = '';
   updateSyncConfigStatus();
   showToast('✅ 已清除配置');
+}
+
+// 复制预置账号/密码
+function copyPreset(elementId) {
+  const text = document.getElementById(elementId).textContent;
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(text).then(() => {
+      showToast('✅ 已复制到剪贴板');
+    }).catch(() => {
+      fallbackCopy(text);
+    });
+  } else {
+    fallbackCopy(text);
+  }
+}
+function fallbackCopy(text) {
+  const input = document.createElement('input');
+  input.value = text;
+  input.style.position = 'fixed';
+  input.style.opacity = '0';
+  document.body.appendChild(input);
+  input.select();
+  try {
+    document.execCommand('copy');
+    showToast('✅ 已复制到剪贴板');
+  } catch (e) {
+    showToast('❌ 复制失败，请手动复制');
+  }
+  document.body.removeChild(input);
 }
 
 // 更新配置状态显示
