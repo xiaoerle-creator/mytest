@@ -3771,9 +3771,10 @@ async function createGist(token, data) {
   const response = await fetch(`${GIST_API}/gists`, {
     method: 'POST',
     headers: {
-      'Authorization': `token ${token}`,
+      'Authorization': `Bearer ${token}`,
+      'Accept': 'application/vnd.github+json',
       'Content-Type': 'application/json',
-      'Accept': 'application/vnd.github.v3+json'
+      'X-GitHub-Api-Version': '2022-11-28'
     },
     body: JSON.stringify({
       description: '口腔医学刷题APP同步数据',
@@ -3799,8 +3800,9 @@ async function pullFromGist(token, gistId) {
   const response = await fetch(`${GIST_API}/gists/${gistId}`, {
     method: 'GET',
     headers: {
-      'Authorization': `token ${token}`,
-      'Accept': 'application/vnd.github.v3+json'
+      'Authorization': `Bearer ${token}`,
+      'Accept': 'application/vnd.github+json',
+      'X-GitHub-Api-Version': '2022-11-28'
     }
   });
   
@@ -3818,9 +3820,10 @@ async function pushToGist(token, gistId, data) {
   const response = await fetch(`${GIST_API}/gists/${gistId}`, {
     method: 'PATCH',
     headers: {
-      'Authorization': `token ${token}`,
+      'Authorization': `Bearer ${token}`,
+      'Accept': 'application/vnd.github+json',
       'Content-Type': 'application/json',
-      'Accept': 'application/vnd.github.v3+json'
+      'X-GitHub-Api-Version': '2022-11-28'
     },
     body: JSON.stringify({
       files: {
