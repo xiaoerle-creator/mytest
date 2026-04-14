@@ -1774,8 +1774,28 @@ textarea.api-input {
           </div>
           <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px">
             <button class="btn btn-primary btn-sm" onclick="manualSyncNow()">🔄 立即同步</button>
+            <button class="btn btn-secondary btn-sm" onclick="toggleSyncConfigPanel()">⚙️ 自定义配置</button>
           </div>
           <div id="sync-status" style="margin-top:10px;font-size:13px"></div>
+
+          <!-- 自定义 JSONBin 配置（折叠） -->
+          <div id="sync-config-panel" style="display:none;margin-top:12px;background:var(--gray-50);border-radius:8px;padding:12px;border:1px solid var(--gray-200)">
+            <div style="font-size:12px;color:var(--gray-600);margin-bottom:10px;line-height:1.7">
+              若遇到同步失败（如 403），请前往 <strong>jsonbin.io</strong> 免费注册账号，在后台创建一个 Bin，然后填入以下信息（保存后立即生效）：
+            </div>
+            <div style="margin-bottom:8px">
+              <label style="font-size:12px;color:var(--gray-600);display:block;margin-bottom:4px">API Key（Master Key）</label>
+              <input id="user-jsonbin-key" type="password" class="api-input" placeholder="$2a$10$..." style="font-size:12px;font-family:monospace" oninput="saveSyncConfig()">
+            </div>
+            <div style="margin-bottom:10px">
+              <label style="font-size:12px;color:var(--gray-600);display:block;margin-bottom:4px">Bin ID</label>
+              <input id="user-jsonbin-binid" type="text" class="api-input" placeholder="24位十六进制字符串" style="font-size:12px;font-family:monospace" oninput="saveSyncConfig()">
+            </div>
+            <div style="display:flex;gap:8px">
+              <button class="btn btn-danger btn-sm" onclick="clearSyncConfig()">🗑️ 清除自定义配置</button>
+            </div>
+            <div id="sync-config-status" style="margin-top:8px;font-size:12px;color:var(--gray-500)"></div>
+          </div>
         </div>
 
         <div style="border-top:1px solid var(--gray-200);padding-top:14px;margin-bottom:14px"></div>
@@ -1855,8 +1875,8 @@ textarea.api-input {
 </div>
 
 <!-- 引入题目数据 -->
-<script src="questions_data.js?v=20260408v4"></script>
-<script src="questions_data_new.js?v=20260411v1"></script>
+<script src="刷题APP/questions_data.js?v=20260408v4"></script>
+<script src="刷题APP/questions_data_new.js?v=20260411v1"></script>
 
 <script>
 // ============================================================
@@ -3724,6 +3744,57 @@ const JSONBIN_PRESET = {
   binId:  '69d311b936566621a8819078'
 };
 
+// 获取生效的 JSONBin 配置（用户自定义优先）
+function getJSONBinConfig() {
+  const user = DB.get('userSyncConfig', null);
+  if (user && user.apiKey && user.binId) return user;
+  return JSONBIN_PRESET;
+}
+
+// 折叠/展开自定义配置面板，打开时回填已保存的值
+function toggleSyncConfigPanel() {
+  const panel = document.getElementById('sync-config-panel');
+  const isHidden = panel.style.display === 'none';
+  panel.style.display = isHidden ? 'block' : 'none';
+  if (isHidden) {
+    const saved = DB.get('userSyncConfig', null);
+    if (saved) {
+      document.getElementById('user-jsonbin-key').value   = saved.apiKey || '';
+      document.getElementById('user-jsonbin-binid').value = saved.binId  || '';
+    }
+    updateSyncConfigStatus();
+  }
+}
+
+// 实时保存（oninput 触发）
+function saveSyncConfig() {
+  const key   = document.getElementById('user-jsonbin-key').value.trim();
+  const binId = document.getElementById('user-jsonbin-binid').value.trim();
+  if (key && binId) {
+    DB.set('userSyncConfig', { apiKey: key, binId });
+  }
+  updateSyncConfigStatus();
+}
+
+function clearSyncConfig() {
+  DB.del('userSyncConfig');
+  document.getElementById('user-jsonbin-key').value   = '';
+  document.getElementById('user-jsonbin-binid').value = '';
+  updateSyncConfigStatus();
+  showToast('已清除自定义配置，恢复使用预置账号');
+}
+
+function updateSyncConfigStatus() {
+  const el = document.getElementById('sync-config-status');
+  if (!el) return;
+  const saved = DB.get('userSyncConfig', null);
+  if (saved && saved.apiKey && saved.binId) {
+    el.innerHTML = '<span style="color:var(--success)">✅ 使用自定义配置</span>';
+  } else {
+    el.innerHTML = '<span style="color:var(--gray-400)">当前使用预置账号（未配置自定义）</span>';
+  }
+}
+
 // 同步状态
 const SYNC_STATE = {
   lastPullTime: 0,   // 上次拉取时间
@@ -3836,8 +3907,15 @@ async function autoSyncPull() {
   SYNC_STATE.isSyncing = true;
 
   try {
-    const response = await fetch(`${JSONBIN_API}/b/${JSONBIN_PRESET.binId}/latest`, {
-      headers: { 'X-Master-Key': JSONBIN_PRESET.apiKey }
+    const cfg = getJSONBinConfig();
+    const response = await fetch(`${JSONBIN_API}/b/${cfg.binId}/latest`, {
+      method: 'GET',
+      headers: {
+        'X-Master-Key': cfg.apiKey,
+        'Content-Type': 'application/json'
+      },
+      mode: 'cors',
+      cache: 'no-cache'
     });
 
     if (!response.ok) {
@@ -3853,8 +3931,11 @@ async function autoSyncPull() {
       const ptCount = Object.keys(DB.get('answerHistory', {})).length;
       const dxCount = Object.keys(DB.get('answerHistory_dingxin', {})).length;
       showSyncStatus(`✅ 云端已同步：白金卷 ${ptCount} 题 / 定心卷 ${dxCount} 题`, 'success');
-      // 合并后将结果上传，确保其他设备下次拉取能拿到完整数据
-      autoSyncPush();
+      // 合并后将结果上传（距上次push超过60秒才执行，避免频率超限）
+      const now = Date.now();
+      if (!SYNC_STATE.lastPushTime || now - SYNC_STATE.lastPushTime > 60000) {
+        autoSyncPush();
+      }
     } else {
       showSyncStatus('ℹ️ 云端暂无数据，答题后自动上传', 'info');
     }
@@ -3876,20 +3957,22 @@ function autoSyncPush() {
   if (SYNC_STATE.pendingPush) {
     clearTimeout(SYNC_STATE.pendingPush);
   }
-  // 5秒防抖：连续答题只上传一次
+  // 30秒防抖：连续答题只上传一次，避免触发免费套餐频率限制
   SYNC_STATE.pendingPush = setTimeout(async () => {
     if (SYNC_STATE.isSyncing) return;
     SYNC_STATE.isSyncing = true;
 
     try {
       const payload = getSyncPayload();
+      const cfg = getJSONBinConfig();
 
-      const response = await fetch(`${JSONBIN_API}/b/${JSONBIN_PRESET.binId}`, {
+      const response = await fetch(`${JSONBIN_API}/b/${cfg.binId}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
-          'X-Master-Key': JSONBIN_PRESET.apiKey
+          'X-Master-Key': cfg.apiKey
         },
+        mode: 'cors',
         body: JSON.stringify(payload)
       });
 
@@ -3908,7 +3991,7 @@ function autoSyncPush() {
     } finally {
       SYNC_STATE.isSyncing = false;
     }
-  }, 5000);
+  }, 30000);
 }
 
 // 格式化同步时间
@@ -3927,9 +4010,16 @@ async function manualSyncNow() {
   showSyncStatus('⏳ 正在同步...', 'info');
 
   try {
+    const cfg = getJSONBinConfig();
     // 先拉取云端数据
-    const pullRes = await fetch(`${JSONBIN_API}/b/${JSONBIN_PRESET.binId}/latest`, {
-      headers: { 'X-Master-Key': JSONBIN_PRESET.apiKey }
+    const pullRes = await fetch(`${JSONBIN_API}/b/${cfg.binId}/latest`, {
+      method: 'GET',
+      headers: {
+        'X-Master-Key': cfg.apiKey,
+        'Content-Type': 'application/json'
+      },
+      mode: 'cors',
+      cache: 'no-cache'
     });
     if (pullRes.ok) {
       const pullData = await pullRes.json();
@@ -3941,12 +4031,13 @@ async function manualSyncNow() {
 
     // 上传当前数据
     const payload = getSyncPayload();
-    const pushRes = await fetch(`${JSONBIN_API}/b/${JSONBIN_PRESET.binId}`, {
+    const pushRes = await fetch(`${JSONBIN_API}/b/${cfg.binId}`, {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
-        'X-Master-Key': JSONBIN_PRESET.apiKey
+        'X-Master-Key': cfg.apiKey
       },
+      mode: 'cors',
       body: JSON.stringify(payload)
     });
 
