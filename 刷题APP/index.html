@@ -1778,21 +1778,24 @@ textarea.api-input {
           </div>
           <div id="sync-status" style="margin-top:10px;font-size:13px"></div>
 
-          <!-- 自定义 JSONBin 配置（折叠） -->
+          <!-- GitHub Gist 配置（折叠） -->
           <div id="sync-config-panel" style="display:none;margin-top:12px;background:var(--gray-50);border-radius:8px;padding:12px;border:1px solid var(--gray-200)">
             <div style="font-size:12px;color:var(--gray-600);margin-bottom:10px;line-height:1.7">
-              若遇到同步失败（如 403），请前往 <strong>jsonbin.io</strong> 免费注册账号，在后台创建一个 Bin，然后填入以下信息（保存后立即生效）：
+              使用 <strong>GitHub Gist</strong> 进行云同步（支持 GitHub Pages）：
+              <br>1. 前往 GitHub → Settings → Developer settings → Personal access tokens
+              <br>2. 生成 Token（勾选 <code>gist</code> 权限）
+              <br>3. 首次同步会自动创建 Gist，或填入已有的 Gist ID
             </div>
             <div style="margin-bottom:8px">
-              <label style="font-size:12px;color:var(--gray-600);display:block;margin-bottom:4px">API Key（Master Key）</label>
-              <input id="user-jsonbin-key" type="password" class="api-input" placeholder="$2a$10$..." style="font-size:12px;font-family:monospace" oninput="saveSyncConfig()">
+              <label style="font-size:12px;color:var(--gray-600);display:block;margin-bottom:4px">GitHub Token</label>
+              <input id="gist-token" type="password" class="api-input" placeholder="ghp_..." style="font-size:12px;font-family:monospace" oninput="saveGistConfigFromUI()">
             </div>
             <div style="margin-bottom:10px">
-              <label style="font-size:12px;color:var(--gray-600);display:block;margin-bottom:4px">Bin ID</label>
-              <input id="user-jsonbin-binid" type="text" class="api-input" placeholder="24位十六进制字符串" style="font-size:12px;font-family:monospace" oninput="saveSyncConfig()">
+              <label style="font-size:12px;color:var(--gray-600);display:block;margin-bottom:4px">Gist ID（可选，首次留空自动创建）</label>
+              <input id="gist-id" type="text" class="api-input" placeholder="32位字符串，如：a1b2c3d4..." style="font-size:12px;font-family:monospace" oninput="saveGistConfigFromUI()">
             </div>
             <div style="display:flex;gap:8px">
-              <button class="btn btn-danger btn-sm" onclick="clearSyncConfig()">🗑️ 清除自定义配置</button>
+              <button class="btn btn-danger btn-sm" onclick="clearGistConfig()">🗑️ 清除配置</button>
             </div>
             <div id="sync-config-status" style="margin-top:8px;font-size:12px;color:var(--gray-500)"></div>
           </div>
@@ -3737,51 +3740,143 @@ function updateAIType() {
 
 // ========== 数据同步（零配置自动同步）==========
 
-// 预置 JSONBin 配置（无需用户手动填写）
-const JSONBIN_API = 'https://api.jsonbin.io/v3';
-const JSONBIN_PRESET = {
-  apiKey: '$2a$10$OpuDazWjrN3AYKcG9kK01.eW0UZNFElG2u5L8BAxdM3a/uURZEu8S',
-  binId:  '69d311b936566621a8819078'
-};
+// ========== 数据同步（GitHub Gist 方案，支持 GitHub Pages CORS）==========
 
-// 获取生效的 JSONBin 配置（用户自定义优先）
-function getJSONBinConfig() {
-  const user = DB.get('userSyncConfig', null);
-  if (user && user.apiKey && user.binId) return user;
-  return JSONBIN_PRESET;
+const GIST_API = 'https://api.github.com';
+
+// 获取 Gist 配置
+function getGistConfig() {
+  return {
+    token: DB.get('gistToken', ''),
+    gistId: DB.get('gistId', '')
+  };
 }
 
-// 折叠/展开自定义配置面板，打开时回填已保存的值
+// 保存 Gist 配置
+function saveGistConfig(token, gistId) {
+  DB.set('gistToken', token);
+  DB.set('gistId', gistId);
+}
+
+// 检查是否已配置 Gist
+function isGistConfigured() {
+  const cfg = getGistConfig();
+  return cfg.token && cfg.gistId;
+}
+
+// 创建新的 Gist（首次同步时）
+async function createGist(token, data) {
+  const response = await fetch(`${GIST_API}/gists`, {
+    method: 'POST',
+    headers: {
+      'Authorization': `token ${token}`,
+      'Content-Type': 'application/json',
+      'Accept': 'application/vnd.github.v3+json'
+    },
+    body: JSON.stringify({
+      description: '口腔医学刷题APP同步数据',
+      public: false,
+      files: {
+        'sync-data.json': {
+          content: JSON.stringify(data, null, 2)
+        }
+      }
+    })
+  });
+  
+  if (!response.ok) {
+    throw new Error(`创建 Gist 失败: HTTP ${response.status}`);
+  }
+  
+  const result = await response.json();
+  return result.id;
+}
+
+// 从 Gist 拉取数据
+async function pullFromGist(token, gistId) {
+  const response = await fetch(`${GIST_API}/gists/${gistId}`, {
+    method: 'GET',
+    headers: {
+      'Authorization': `token ${token}`,
+      'Accept': 'application/vnd.github.v3+json'
+    }
+  });
+  
+  if (!response.ok) {
+    throw new Error(`拉取失败: HTTP ${response.status}`);
+  }
+  
+  const result = await response.json();
+  const content = result.files['sync-data.json']?.content;
+  return content ? JSON.parse(content) : null;
+}
+
+// 推送数据到 Gist
+async function pushToGist(token, gistId, data) {
+  const response = await fetch(`${GIST_API}/gists/${gistId}`, {
+    method: 'PATCH',
+    headers: {
+      'Authorization': `token ${token}`,
+      'Content-Type': 'application/json',
+      'Accept': 'application/vnd.github.v3+json'
+    },
+    body: JSON.stringify({
+      files: {
+        'sync-data.json': {
+          content: JSON.stringify(data, null, 2)
+        }
+      }
+    })
+  });
+  
+  if (!response.ok) {
+    throw new Error(`推送失败: HTTP ${response.status}`);
+  }
+  
+  return await response.json();
+}
+
+// 折叠/展开 Gist 配置面板，打开时回填已保存的值
 function toggleSyncConfigPanel() {
   const panel = document.getElementById('sync-config-panel');
   const isHidden = panel.style.display === 'none';
   panel.style.display = isHidden ? 'block' : 'none';
   if (isHidden) {
-    const saved = DB.get('userSyncConfig', null);
-    if (saved) {
-      document.getElementById('user-jsonbin-key').value   = saved.apiKey || '';
-      document.getElementById('user-jsonbin-binid').value = saved.binId  || '';
-    }
+    const cfg = getGistConfig();
+    document.getElementById('gist-token').value = cfg.token || '';
+    document.getElementById('gist-id').value = cfg.gistId || '';
     updateSyncConfigStatus();
   }
 }
 
-// 实时保存（oninput 触发）
-function saveSyncConfig() {
-  const key   = document.getElementById('user-jsonbin-key').value.trim();
-  const binId = document.getElementById('user-jsonbin-binid').value.trim();
-  if (key && binId) {
-    DB.set('userSyncConfig', { apiKey: key, binId });
-  }
+// 从 UI 保存 Gist 配置
+function saveGistConfigFromUI() {
+  const token = document.getElementById('gist-token').value.trim();
+  const gistId = document.getElementById('gist-id').value.trim();
+  saveGistConfig(token, gistId);
   updateSyncConfigStatus();
 }
 
-function clearSyncConfig() {
-  DB.del('userSyncConfig');
-  document.getElementById('user-jsonbin-key').value   = '';
-  document.getElementById('user-jsonbin-binid').value = '';
+// 清除 Gist 配置
+function clearGistConfig() {
+  DB.del('gistToken');
+  DB.del('gistId');
+  document.getElementById('gist-token').value = '';
+  document.getElementById('gist-id').value = '';
   updateSyncConfigStatus();
-  showToast('已清除自定义配置，恢复使用预置账号');
+  showToast('✅ 已清除配置');
+}
+
+// 更新配置状态显示
+function updateSyncConfigStatus() {
+  const statusEl = document.getElementById('sync-config-status');
+  if (isGistConfigured()) {
+    const cfg = getGistConfig();
+    const maskedId = cfg.gistId ? cfg.gistId.substring(0, 8) + '...' : '未设置';
+    statusEl.innerHTML = `<span style="color:var(--success)">✅ 已配置 · Gist: ${maskedId}</span>`;
+  } else {
+    statusEl.innerHTML = '<span style="color:var(--warning)">⚠️ 请先配置 GitHub Token</span>';
+  }
 }
 
 function updateSyncConfigStatus() {
@@ -3904,46 +3999,44 @@ function mergeCloudData(cloudData) {
 // 从云端拉取数据（APP打开时自动调用）
 async function autoSyncPull() {
   if (SYNC_STATE.isSyncing) return;
+  if (!isGistConfigured()) {
+    showSyncStatus('⚠️ 请先配置 GitHub Token', 'warning');
+    return;
+  }
   SYNC_STATE.isSyncing = true;
 
   try {
-    const cfg = getJSONBinConfig();
-    const response = await fetch(`${JSONBIN_API}/b/${cfg.binId}/latest`, {
-      method: 'GET',
-      headers: {
-        'X-Master-Key': cfg.apiKey,
-        'Content-Type': 'application/json'
-      },
-      mode: 'cors',
-      cache: 'no-cache'
-    });
-
-    if (!response.ok) {
-      throw new Error(`HTTP ${response.status}`);
-    }
-
-    const result = await response.json();
-    const cloudData = result.record;
-
-    if ((cloudData?.answerHistory && Object.keys(cloudData.answerHistory).length > 0)
-        || (cloudData?.answerHistory_dingxin && Object.keys(cloudData.answerHistory_dingxin).length > 0)) {
-      mergeCloudData(cloudData);
-      const ptCount = Object.keys(DB.get('answerHistory', {})).length;
-      const dxCount = Object.keys(DB.get('answerHistory_dingxin', {})).length;
-      showSyncStatus(`✅ 云端已同步：白金卷 ${ptCount} 题 / 定心卷 ${dxCount} 题`, 'success');
-      // 合并后将结果上传（距上次push超过60秒才执行，避免频率超限）
-      const now = Date.now();
-      if (!SYNC_STATE.lastPushTime || now - SYNC_STATE.lastPushTime > 60000) {
-        autoSyncPush();
-      }
+    const cfg = getGistConfig();
+    let cloudData = null;
+    
+    // 如果没有 Gist ID，首次自动创建
+    if (!cfg.gistId) {
+      const payload = getSyncPayload();
+      const newGistId = await createGist(cfg.token, payload);
+      saveGistConfig(cfg.token, newGistId);
+      showSyncStatus('✅ 已创建新的同步 Gist', 'success');
     } else {
-      showSyncStatus('ℹ️ 云端暂无数据，答题后自动上传', 'info');
+      cloudData = await pullFromGist(cfg.token, cfg.gistId);
+      
+      if (cloudData && ((cloudData.answerHistory && Object.keys(cloudData.answerHistory).length > 0)
+          || (cloudData.answerHistory_dingxin && Object.keys(cloudData.answerHistory_dingxin).length > 0))) {
+        mergeCloudData(cloudData);
+        const ptCount = Object.keys(DB.get('answerHistory', {})).length;
+        const dxCount = Object.keys(DB.get('answerHistory_dingxin', {})).length;
+        showSyncStatus(`✅ 云端已同步：白金卷 ${ptCount} 题 / 定心卷 ${dxCount} 题`, 'success');
+        // 合并后将结果上传（距上次push超过60秒才执行，避免频率超限）
+        const now = Date.now();
+        if (!SYNC_STATE.lastPushTime || now - SYNC_STATE.lastPushTime > 60000) {
+          autoSyncPush();
+        }
+      } else {
+        showSyncStatus('ℹ️ 云端暂无数据，答题后自动上传', 'info');
+      }
     }
 
     SYNC_STATE.pullDone = true;
     SYNC_STATE.lastPullTime = Date.now();
   } catch (err) {
-    // 静默失败，不影响用户使用
     console.warn('[自动同步] 拉取失败:', err.message);
     showSyncStatus('⚠️ 云端同步暂不可用，本地数据不受影响', 'warning');
   } finally {
@@ -3964,21 +4057,9 @@ function autoSyncPush() {
 
     try {
       const payload = getSyncPayload();
-      const cfg = getJSONBinConfig();
+      const cfg = getGistConfig();
 
-      const response = await fetch(`${JSONBIN_API}/b/${cfg.binId}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-Master-Key': cfg.apiKey
-        },
-        mode: 'cors',
-        body: JSON.stringify(payload)
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}`);
-      }
+      await pushToGist(cfg.token, cfg.gistId, payload);
 
       SYNC_STATE.lastPushTime = Date.now();
       // 更新同步页面状态
@@ -4006,42 +4087,24 @@ async function manualSyncNow() {
     showToast('⏳ 正在同步中...');
     return;
   }
+  if (!isGistConfigured()) {
+    showSyncStatus('⚠️ 请先配置 GitHub Token', 'warning');
+    return;
+  }
   SYNC_STATE.isSyncing = true;
   showSyncStatus('⏳ 正在同步...', 'info');
 
   try {
-    const cfg = getJSONBinConfig();
+    const cfg = getGistConfig();
     // 先拉取云端数据
-    const pullRes = await fetch(`${JSONBIN_API}/b/${cfg.binId}/latest`, {
-      method: 'GET',
-      headers: {
-        'X-Master-Key': cfg.apiKey,
-        'Content-Type': 'application/json'
-      },
-      mode: 'cors',
-      cache: 'no-cache'
-    });
-    if (pullRes.ok) {
-      const pullData = await pullRes.json();
-      const cloudData = pullData.record || {};
-      if (cloudData.answerHistory || cloudData.answerHistory_dingxin) {
-        mergeCloudData(cloudData);
-      }
+    const cloudData = await pullFromGist(cfg.token, cfg.gistId);
+    if (cloudData && (cloudData.answerHistory || cloudData.answerHistory_dingxin)) {
+      mergeCloudData(cloudData);
     }
 
     // 上传当前数据
     const payload = getSyncPayload();
-    const pushRes = await fetch(`${JSONBIN_API}/b/${cfg.binId}`, {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-Master-Key': cfg.apiKey
-      },
-      mode: 'cors',
-      body: JSON.stringify(payload)
-    });
-
-    if (!pushRes.ok) throw new Error(`HTTP ${pushRes.status}`);
+    await pushToGist(cfg.token, cfg.gistId, payload);
 
     SYNC_STATE.lastPullTime = Date.now();
     SYNC_STATE.lastPushTime = Date.now();
