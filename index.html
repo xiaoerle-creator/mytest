@@ -1766,11 +1766,11 @@ textarea.api-input {
       </div>
       <div class="card-body">
 
-        <!-- 在线自动同步（零配置） -->
+        <!-- 在线自动同步（坚果云WebDAV） -->
         <div style="margin-bottom:16px">
           <div style="font-size:14px;font-weight:700;color:var(--gray-800);margin-bottom:6px">☁️ 云端自动同步</div>
           <div style="font-size:12px;color:var(--gray-500);margin-bottom:10px;line-height:1.6">
-            打开APP自动拉取云端数据，答题后自动上传。多设备无缝切换，无需任何配置。
+            使用坚果云WebDAV同步数据。配置账号后，打开APP自动拉取，答题后自动上传。
           </div>
           <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px">
             <button class="btn btn-primary btn-sm" onclick="manualSyncNow()">🔄 立即同步</button>
@@ -1778,24 +1778,24 @@ textarea.api-input {
           </div>
           <div id="sync-status" style="margin-top:10px;font-size:13px"></div>
 
-          <!-- GitHub Gist 配置（折叠） -->
+          <!-- 坚果云 WebDAV 配置（折叠） -->
           <div id="sync-config-panel" style="display:none;margin-top:12px;background:var(--gray-50);border-radius:8px;padding:12px;border:1px solid var(--gray-200)">
             <div style="font-size:12px;color:var(--gray-600);margin-bottom:10px;line-height:1.7">
-              使用 <strong>GitHub Gist</strong> 进行云同步（支持 GitHub Pages）：
-              <br>1. 前往 GitHub → Settings → Developer settings → Personal access tokens
-              <br>2. 生成 Token（勾选 <code>gist</code> 权限）
-              <br>3. 首次同步会自动创建 Gist，或填入已有的 Gist ID
+              使用 <strong>坚果云 WebDAV</strong> 进行云同步（支持 GitHub Pages）：
+              <br>1. 前往 <a href="https://www.jianguoyun.com/" target="_blank">坚果云</a> 注册账号
+              <br>2. 在「安全选项」→「第三方应用管理」中开启 WebDAV
+              <br>3. 应用密码 = WebDAV 密码（不是登录密码）
             </div>
             <div style="margin-bottom:8px">
-              <label style="font-size:12px;color:var(--gray-600);display:block;margin-bottom:4px">GitHub Token</label>
-              <input id="gist-token" type="text" class="api-input" placeholder="ghp_..." style="font-size:12px;font-family:monospace" oninput="saveGistConfigFromUI()">
+              <label style="font-size:12px;color:var(--gray-600);display:block;margin-bottom:4px">坚果云账号（邮箱）</label>
+              <input id="webdav-username" type="text" class="api-input" placeholder="your@email.com" style="font-size:12px;font-family:monospace" oninput="saveWebDAVConfigFromUI()">
             </div>
             <div style="margin-bottom:10px">
-              <label style="font-size:12px;color:var(--gray-600);display:block;margin-bottom:4px">Gist ID（可选，首次留空自动创建）</label>
-              <input id="gist-id" type="text" class="api-input" placeholder="32位字符串，如：a1b2c3d4..." style="font-size:12px;font-family:monospace" oninput="saveGistConfigFromUI()">
+              <label style="font-size:12px;color:var(--gray-600);display:block;margin-bottom:4px">应用密码</label>
+              <input id="webdav-password" type="password" class="api-input" placeholder="在坚果云安全选项中获取" style="font-size:12px;font-family:monospace" oninput="saveWebDAVConfigFromUI()">
             </div>
             <div style="display:flex;gap:8px">
-              <button class="btn btn-danger btn-sm" onclick="clearGistConfig()">🗑️ 清除配置</button>
+              <button class="btn btn-danger btn-sm" onclick="clearWebDAVConfig()">🗑️ 清除配置</button>
             </div>
             <div id="sync-config-status" style="margin-top:8px;font-size:12px;color:var(--gray-500)"></div>
           </div>
@@ -3738,137 +3738,114 @@ function updateAIType() {
   baseUrlRow.style.display = (t === 'custom' || t === 'qwen') ? 'block' : 'none';
 }
 
-// ========== 数据同步（零配置自动同步）==========
+// ========== 数据同步（坚果云 WebDAV）==========
 
-// ========== 数据同步（GitHub Gist 方案，支持 GitHub Pages CORS）==========
+const JIANGUOYUN_API = 'https://dav.jianguoyun.com/dav';
+const SYNC_FILE_NAME = 'zhuzhibiguo-sync.json';
 
-const GIST_API = 'https://api.github.com';
-
-// 获取 Gist 配置（优先使用内置Token）
-function getGistConfig() {
-  // Token 分段拼接，避免 GitHub secret scanning
-  const builtInToken = ['ghp_ZdCHjpVfhcm', 'TSTxPz1j9v63YO', 'KSF7v0Z25Ad'].join('');
-  const userToken = DB.get('gistToken', '');
-  return {
-    token: userToken || builtInToken,
-    gistId: DB.get('gistId', '')
-  };
-}
-
-// 保存 Gist 配置
-function saveGistConfig(token, gistId) {
-  DB.set('gistToken', token);
-  DB.set('gistId', gistId);
-}
-
-// 检查是否已配置 Gist（内置Token也算已配置）
-function isGistConfigured() {
-  const cfg = getGistConfig();
-  return !!cfg.token;
-}
-
-// 创建新的 Gist（首次同步时）
-async function createGist(token, data) {
-  const response = await fetch(`${GIST_API}/gists`, {
-    method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${token}`,
-      'Accept': 'application/vnd.github+json',
-      'Content-Type': 'application/json',
-      'X-GitHub-Api-Version': '2022-11-28'
-    },
-    body: JSON.stringify({
-      description: '口腔医学刷题APP同步数据',
-      public: false,
-      files: {
-        'sync-data.json': {
-          content: JSON.stringify(data, null, 2)
-        }
-      }
-    })
+// 获取 WebDAV 配置
+function getWebDAVConfig() {
+  return DB.get('webdavConfig', {
+    server: 'https://dav.jianguoyun.com/dav',
+    username: '',
+    password: '',
+    enabled: false
   });
-  
-  if (!response.ok) {
-    throw new Error(`创建 Gist 失败: HTTP ${response.status}`);
-  }
-  
-  const result = await response.json();
-  return result.id;
 }
 
-// 从 Gist 拉取数据
-async function pullFromGist(token, gistId) {
-  const response = await fetch(`${GIST_API}/gists/${gistId}`, {
+// 保存 WebDAV 配置
+function saveWebDAVConfig(config) {
+  DB.set('webdavConfig', config);
+}
+
+// 检查是否已配置 WebDAV
+function isWebDAVConfigured() {
+  const cfg = getWebDAVConfig();
+  return cfg.enabled && cfg.username && cfg.password;
+}
+
+// WebDAV 基本认证头
+function getWebDAVAuth(cfg) {
+  return 'Basic ' + btoa(cfg.username + ':' + cfg.password);
+}
+
+// 从 WebDAV 拉取数据
+async function pullFromWebDAV(cfg) {
+  const url = cfg.server + '/' + SYNC_FILE_NAME;
+  const response = await fetch(url, {
     method: 'GET',
     headers: {
-      'Authorization': `Bearer ${token}`,
-      'Accept': 'application/vnd.github+json',
-      'X-GitHub-Api-Version': '2022-11-28'
+      'Authorization': getWebDAVAuth(cfg)
     }
   });
+  
+  if (response.status === 404) {
+    return null; // 文件不存在
+  }
   
   if (!response.ok) {
     throw new Error(`拉取失败: HTTP ${response.status}`);
   }
   
-  const result = await response.json();
-  const content = result.files['sync-data.json']?.content;
+  const content = await response.text();
   return content ? JSON.parse(content) : null;
 }
 
-// 推送数据到 Gist
-async function pushToGist(token, gistId, data) {
-  const response = await fetch(`${GIST_API}/gists/${gistId}`, {
-    method: 'PATCH',
+// 推送数据到 WebDAV
+async function pushToWebDAV(cfg, data) {
+  const url = cfg.server + '/' + SYNC_FILE_NAME;
+  const response = await fetch(url, {
+    method: 'PUT',
     headers: {
-      'Authorization': `Bearer ${token}`,
-      'Accept': 'application/vnd.github+json',
-      'Content-Type': 'application/json',
-      'X-GitHub-Api-Version': '2022-11-28'
+      'Authorization': getWebDAVAuth(cfg),
+      'Content-Type': 'application/json'
     },
-    body: JSON.stringify({
-      files: {
-        'sync-data.json': {
-          content: JSON.stringify(data, null, 2)
-        }
-      }
-    })
+    body: JSON.stringify(data, null, 2)
   });
   
   if (!response.ok) {
     throw new Error(`推送失败: HTTP ${response.status}`);
   }
   
-  return await response.json();
+  return true;
 }
 
-// 折叠/展开 Gist 配置面板，打开时回填已保存的值
+// 折叠/展开 WebDAV 配置面板
 function toggleSyncConfigPanel() {
   const panel = document.getElementById('sync-config-panel');
   const isHidden = panel.style.display === 'none';
   panel.style.display = isHidden ? 'block' : 'none';
   if (isHidden) {
-    const cfg = getGistConfig();
-    document.getElementById('gist-token').value = cfg.token || '';
-    document.getElementById('gist-id').value = cfg.gistId || '';
+    const cfg = getWebDAVConfig();
+    document.getElementById('webdav-username').value = cfg.username || '';
+    document.getElementById('webdav-password').value = cfg.password || '';
     updateSyncConfigStatus();
   }
 }
 
-// 从 UI 保存 Gist 配置
-function saveGistConfigFromUI() {
-  const token = document.getElementById('gist-token').value.trim();
-  const gistId = document.getElementById('gist-id').value.trim();
-  saveGistConfig(token, gistId);
+// 从 UI 保存 WebDAV 配置
+function saveWebDAVConfigFromUI() {
+  const username = document.getElementById('webdav-username').value.trim();
+  const password = document.getElementById('webdav-password').value.trim();
+  saveWebDAVConfig({
+    server: 'https://dav.jianguoyun.com/dav',
+    username: username,
+    password: password,
+    enabled: !!(username && password)
+  });
   updateSyncConfigStatus();
 }
 
-// 清除 Gist 配置
-function clearGistConfig() {
-  DB.del('gistToken');
-  DB.del('gistId');
-  document.getElementById('gist-token').value = '';
-  document.getElementById('gist-id').value = '';
+// 清除 WebDAV 配置
+function clearWebDAVConfig() {
+  saveWebDAVConfig({
+    server: 'https://dav.jianguoyun.com/dav',
+    username: '',
+    password: '',
+    enabled: false
+  });
+  document.getElementById('webdav-username').value = '';
+  document.getElementById('webdav-password').value = '';
   updateSyncConfigStatus();
   showToast('✅ 已清除配置');
 }
@@ -3876,23 +3853,13 @@ function clearGistConfig() {
 // 更新配置状态显示
 function updateSyncConfigStatus() {
   const statusEl = document.getElementById('sync-config-status');
-  if (isGistConfigured()) {
-    const cfg = getGistConfig();
-    const maskedId = cfg.gistId ? cfg.gistId.substring(0, 8) + '...' : '未设置';
-    statusEl.innerHTML = `<span style="color:var(--success)">✅ 已配置 · Gist: ${maskedId}</span>`;
+  if (!statusEl) return;
+  if (isWebDAVConfigured()) {
+    const cfg = getWebDAVConfig();
+    const maskedUser = cfg.username.substring(0, 3) + '***';
+    statusEl.innerHTML = `<span style="color:var(--success)">✅ 已配置 · ${maskedUser}</span>`;
   } else {
-    statusEl.innerHTML = '<span style="color:var(--warning)">⚠️ 请先配置 GitHub Token</span>';
-  }
-}
-
-function updateSyncConfigStatus() {
-  const el = document.getElementById('sync-config-status');
-  if (!el) return;
-  const saved = DB.get('userSyncConfig', null);
-  if (saved && saved.apiKey && saved.binId) {
-    el.innerHTML = '<span style="color:var(--success)">✅ 使用自定义配置</span>';
-  } else {
-    el.innerHTML = '<span style="color:var(--gray-400)">当前使用预置账号（未配置自定义）</span>';
+    statusEl.innerHTML = '<span style="color:var(--warning)">⚠️ 请先配置坚果云账号</span>';
   }
 }
 
@@ -4005,43 +3972,29 @@ function mergeCloudData(cloudData) {
 // 从云端拉取数据（APP打开时自动调用）
 async function autoSyncPull() {
   if (SYNC_STATE.isSyncing) return;
-  if (!isGistConfigured()) {
-    showSyncStatus('⚠️ 请先配置 GitHub Token', 'warning');
+  if (!isWebDAVConfigured()) {
+    showSyncStatus('⚠️ 请先配置坚果云账号', 'warning');
     return;
   }
   SYNC_STATE.isSyncing = true;
 
   try {
-    const cfg = getGistConfig();
-    let cloudData = null;
+    const cfg = getWebDAVConfig();
+    const cloudData = await pullFromWebDAV(cfg);
     
-    // 如果没有 Gist ID，首次自动创建
-    if (!cfg.gistId) {
-      const payload = getSyncPayload();
-      const newGistId = await createGist(cfg.token, payload);
-      saveGistConfig(cfg.token, newGistId);
-      showSyncStatus('✅ 已创建新的同步 Gist', 'success');
-      SYNC_STATE.pullDone = true;
-      SYNC_STATE.lastPullTime = Date.now();
-      SYNC_STATE.isSyncing = false;
-      return;
-    } else {
-      cloudData = await pullFromGist(cfg.token, cfg.gistId);
-      
-      if (cloudData && ((cloudData.answerHistory && Object.keys(cloudData.answerHistory).length > 0)
-          || (cloudData.answerHistory_dingxin && Object.keys(cloudData.answerHistory_dingxin).length > 0))) {
-        mergeCloudData(cloudData);
-        const ptCount = Object.keys(DB.get('answerHistory', {})).length;
-        const dxCount = Object.keys(DB.get('answerHistory_dingxin', {})).length;
-        showSyncStatus(`✅ 云端已同步：白金卷 ${ptCount} 题 / 定心卷 ${dxCount} 题`, 'success');
-        // 合并后将结果上传（距上次push超过60秒才执行，避免频率超限）
-        const now = Date.now();
-        if (!SYNC_STATE.lastPushTime || now - SYNC_STATE.lastPushTime > 60000) {
-          autoSyncPush();
-        }
-      } else {
-        showSyncStatus('ℹ️ 云端暂无数据，答题后自动上传', 'info');
+    if (cloudData && ((cloudData.answerHistory && Object.keys(cloudData.answerHistory).length > 0)
+        || (cloudData.answerHistory_dingxin && Object.keys(cloudData.answerHistory_dingxin).length > 0))) {
+      mergeCloudData(cloudData);
+      const ptCount = Object.keys(DB.get('answerHistory', {})).length;
+      const dxCount = Object.keys(DB.get('answerHistory_dingxin', {})).length;
+      showSyncStatus(`✅ 云端已同步：白金卷 ${ptCount} 题 / 定心卷 ${dxCount} 题`, 'success');
+      // 合并后将结果上传（距上次push超过60秒才执行）
+      const now = Date.now();
+      if (!SYNC_STATE.lastPushTime || now - SYNC_STATE.lastPushTime > 60000) {
+        autoSyncPush();
       }
+    } else {
+      showSyncStatus('ℹ️ 云端暂无数据，答题后自动上传', 'info');
     }
 
     SYNC_STATE.pullDone = true;
@@ -4060,39 +4013,18 @@ function autoSyncPush() {
   if (SYNC_STATE.pendingPush) {
     clearTimeout(SYNC_STATE.pendingPush);
   }
-  // 30秒防抖：连续答题只上传一次，避免触发免费套餐频率限制
+  // 30秒防抖：连续答题只上传一次
   SYNC_STATE.pendingPush = setTimeout(async () => {
     if (SYNC_STATE.isSyncing) return;
     
-    const cfg = getGistConfig();
-    if (!cfg.token) return;
-    
-    // 如果没有 Gist ID，先创建
-    if (!cfg.gistId) {
-      try {
-        SYNC_STATE.isSyncing = true;
-        const payload = getSyncPayload();
-        const newGistId = await createGist(cfg.token, payload);
-        saveGistConfig(cfg.token, newGistId);
-        SYNC_STATE.lastPushTime = Date.now();
-        console.log('[自动同步] 已创建新 Gist:', newGistId);
-        const statusEl = document.getElementById('sync-status');
-        if (statusEl) {
-          statusEl.innerHTML = `<span style="color:var(--success)">✅ 已创建云端同步 · ${formatSyncTime(Date.now())}</span>`;
-        }
-      } catch (err) {
-        console.warn('[自动同步] 创建 Gist 失败:', err.message);
-      } finally {
-        SYNC_STATE.isSyncing = false;
-      }
-      return;
-    }
+    const cfg = getWebDAVConfig();
+    if (!cfg.enabled || !cfg.username || !cfg.password) return;
     
     SYNC_STATE.isSyncing = true;
 
     try {
       const payload = getSyncPayload();
-      await pushToGist(cfg.token, cfg.gistId, payload);
+      await pushToWebDAV(cfg, payload);
 
       SYNC_STATE.lastPushTime = Date.now();
       // 更新同步页面状态
@@ -4120,37 +4052,25 @@ async function manualSyncNow() {
     showToast('⏳ 正在同步中...');
     return;
   }
-  if (!isGistConfigured()) {
-    showSyncStatus('⚠️ 请先配置 GitHub Token', 'warning');
+  if (!isWebDAVConfigured()) {
+    showSyncStatus('⚠️ 请先配置坚果云账号', 'warning');
     return;
   }
   SYNC_STATE.isSyncing = true;
   showSyncStatus('⏳ 正在同步...', 'info');
 
   try {
-    const cfg = getGistConfig();
-    
-    // 如果没有 Gist ID，先创建
-    if (!cfg.gistId) {
-      const payload = getSyncPayload();
-      const newGistId = await createGist(cfg.token, payload);
-      saveGistConfig(cfg.token, newGistId);
-      showSyncStatus('✅ 已创建新的同步 Gist', 'success');
-      SYNC_STATE.lastPullTime = Date.now();
-      SYNC_STATE.lastPushTime = Date.now();
-      SYNC_STATE.isSyncing = false;
-      return;
-    }
+    const cfg = getWebDAVConfig();
     
     // 先拉取云端数据
-    const cloudData = await pullFromGist(cfg.token, cfg.gistId);
+    const cloudData = await pullFromWebDAV(cfg);
     if (cloudData && (cloudData.answerHistory || cloudData.answerHistory_dingxin)) {
       mergeCloudData(cloudData);
     }
 
     // 上传当前数据
     const payload = getSyncPayload();
-    await pushToGist(cfg.token, cfg.gistId, payload);
+    await pushToWebDAV(cfg, payload);
 
     SYNC_STATE.lastPullTime = Date.now();
     SYNC_STATE.lastPushTime = Date.now();
