@@ -1788,7 +1788,7 @@ textarea.api-input {
             </div>
             <div style="margin-bottom:8px">
               <label style="font-size:12px;color:var(--gray-600);display:block;margin-bottom:4px">GitHub Token</label>
-              <input id="gist-token" type="password" class="api-input" placeholder="ghp_..." style="font-size:12px;font-family:monospace" oninput="saveGistConfigFromUI()">
+              <input id="gist-token" type="text" class="api-input" placeholder="ghp_..." style="font-size:12px;font-family:monospace" oninput="saveGistConfigFromUI()">
             </div>
             <div style="margin-bottom:10px">
               <label style="font-size:12px;color:var(--gray-600);display:block;margin-bottom:4px">Gist ID（可选，首次留空自动创建）</label>
@@ -3746,7 +3746,7 @@ const GIST_API = 'https://api.github.com';
 
 // 获取 Gist 配置（优先使用内置Token）
 function getGistConfig() {
-  const builtInToken = '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';
+  const builtInToken = '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';
   const userToken = DB.get('gistToken', '');
   return {
     token: userToken || builtInToken,
