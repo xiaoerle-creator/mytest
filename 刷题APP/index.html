@@ -3744,10 +3744,12 @@ function updateAIType() {
 
 const GIST_API = 'https://api.github.com';
 
-// 获取 Gist 配置
+// 获取 Gist 配置（优先使用内置Token）
 function getGistConfig() {
+  const builtInToken = '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';
+  const userToken = DB.get('gistToken', '');
   return {
-    token: DB.get('gistToken', ''),
+    token: userToken || builtInToken,
     gistId: DB.get('gistId', '')
   };
 }
@@ -3758,10 +3760,10 @@ function saveGistConfig(token, gistId) {
   DB.set('gistId', gistId);
 }
 
-// 检查是否已配置 Gist
+// 检查是否已配置 Gist（内置Token也算已配置）
 function isGistConfigured() {
   const cfg = getGistConfig();
-  return cfg.token && cfg.gistId;
+  return !!cfg.token;
 }
 
 // 创建新的 Gist（首次同步时）
