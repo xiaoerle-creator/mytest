@@ -1766,37 +1766,22 @@ textarea.api-input {
       </div>
       <div class="card-body">
 
-        <!-- 在线自动同步（JSONBlob.com） -->
+        <!-- 在线自动同步（JSONBin.io） -->
         <div style="margin-bottom:16px">
           <div style="font-size:14px;font-weight:700;color:var(--gray-800);margin-bottom:6px">☁️ 云端自动同步</div>
           <div style="font-size:12px;color:var(--gray-500);margin-bottom:10px;line-height:1.6">
-            使用 JSONBlob.com 同步数据。一键初始化，打开APP自动拉取，答题后自动上传。
+            使用 JSONBin.io 同步数据。已预置账号，打开APP自动拉取，答题后自动上传。
           </div>
           <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px">
             <button class="btn btn-primary btn-sm" onclick="manualSyncNow()">🔄 立即同步</button>
-            <button class="btn btn-secondary btn-sm" onclick="toggleSyncConfigPanel()">⚙️ 自定义配置</button>
+            <button class="btn btn-secondary btn-sm" onclick="toggleSyncConfigPanel()">⚙️ 查看配置</button>
           </div>
           <div id="sync-status" style="margin-top:10px;font-size:13px"></div>
 
           <!-- 云端同步配置（折叠） -->
           <div id="sync-config-panel" style="display:none;margin-top:12px;background:var(--gray-50);border-radius:8px;padding:12px;border:1px solid var(--gray-200)">
             <div style="font-size:12px;color:var(--gray-600);margin-bottom:10px;line-height:1.7">
-              使用 <strong>JSONBlob.com</strong> 进行云同步（免费、无需注册、支持跨域）：
-              <br>1. 点击下方「初始化」按钮，自动创建云端存储
-              <br>2. 首次使用后 Blob ID 会自动保存
-              <br>3. 跨设备只需填入同一个 Blob ID 即可同步
-            </div>
-
-            <div style="display:flex;gap:8px;margin-bottom:10px">
-              <button class="btn btn-sm" style="background:#2563eb;color:white;border:none;border-radius:6px;padding:8px 16px;font-size:12px;font-weight:600" onclick="initCloudSync()">🚀 一键初始化</button>
-            </div>
-
-            <div style="margin-bottom:10px">
-              <label style="font-size:12px;color:var(--gray-600);display:block;margin-bottom:4px">Blob ID（初始化后自动填写，跨设备需手动填入）</label>
-              <input id="sync-blobid" type="text" class="api-input" placeholder="点击「一键初始化」自动生成" style="font-size:12px;font-family:monospace" oninput="saveSyncConfigFromUI()">
-            </div>
-            <div style="display:flex;gap:8px">
-              <button class="btn btn-danger btn-sm" onclick="clearSyncConfig()">🗑️ 清除配置</button>
+              使用 <strong>JSONBin.io</strong> 进行云同步，已预置 API Key 和 Bin ID，无需额外配置。
             </div>
             <div id="sync-config-status" style="margin-top:8px;font-size:12px;color:var(--gray-500)"></div>
           </div>
@@ -3738,15 +3723,19 @@ function updateAIType() {
   baseUrlRow.style.display = (t === 'custom' || t === 'qwen') ? 'block' : 'none';
 }
 
-// ========== 数据同步（JSONBlob.com — 免费、无需注册、原生 CORS）==========
+// ========== 数据同步（JSONBin.io — 免费 CORS 支持）==========
 
-const JSONBLOB_API = 'https://jsonblob.com/api/jsonBlob';
+// ========== 数据同步（JSONBin.io — 免费 CORS 支持）==========
+const JSONBIN_API = 'https://api.jsonbin.io/v3';
+const JSONBIN_BIN_NAME = 'zhuzhibiguo-sync';
+const JSONBIN_API_KEY = '$2a$10$OpuDazWjrN3AYKcG9kK01.eW0UZNFElG2u5L8BAxdM3a/uURZEu8S';
+const JSONBIN_BIN_ID = '69d311b936566621a8819078';
 
 // 获取同步配置
 function getSyncConfig() {
   return DB.get('syncConfig', {
-    blobId: '',
-    enabled: false
+    binId: JSONBIN_BIN_ID,
+    enabled: true
   });
 }
 
@@ -3757,8 +3746,7 @@ function saveSyncConfig(config) {
 
 // 检查是否已配置
 function isSyncConfigured() {
-  const cfg = getSyncConfig();
-  return cfg.enabled && cfg.blobId;
+  return true; // 预置了 Key 和 Bin ID，始终可用
 }
 
 // 兼容旧调用名
@@ -3770,45 +3758,40 @@ function saveJSONBinConfig(c) { return saveSyncConfig(c); }
 // 拉取云端数据
 async function pullFromCloud() {
   const cfg = getSyncConfig();
-  if (!cfg.blobId) return null;
-  const url = JSONBLOB_API + '/' + cfg.blobId;
-  const resp = await fetch(url, { method: 'GET', cache: 'no-cache' });
+  if (!cfg.binId) return null;
+  const url = JSONBIN_API + '/b/' + cfg.binId + '/latest';
+  const resp = await fetch(url, {
+    method: 'GET',
+    cache: 'no-cache',
+    headers: {
+      'X-Master-Key': JSONBIN_API_KEY,
+      'X-Bin-Meta': 'false'
+    }
+  });
   if (resp.status === 404) return null;
-  if (!resp.ok) throw new Error('拉取失败: HTTP ' + resp.status);
+  if (!resp.ok) throw new Error('HTTP ' + resp.status);
   const text = await resp.text();
   return text ? JSON.parse(text) : null;
 }
 
-// 推送数据到云端（无 blobId 则创建新的）
+// 推送数据到云端
 async function pushToCloud(data) {
   const cfg = getSyncConfig();
-  let url, method;
-  if (cfg.blobId) {
-    url = JSONBLOB_API + '/' + cfg.blobId;
-    method = 'PUT';
-  } else {
-    url = JSONBLOB_API;
-    method = 'POST';
-  }
+  if (!cfg.binId) return false;
+  const url = JSONBIN_API + '/b/' + cfg.binId;
   const resp = await fetch(url, {
-    method: method,
+    method: 'PUT',
     cache: 'no-cache',
-    headers: { 'Content-Type': 'application/json' },
+    headers: {
+      'Content-Type': 'application/json',
+      'X-Master-Key': JSONBIN_API_KEY,
+      'X-Bin-Name': JSONBIN_BIN_NAME
+    },
     body: JSON.stringify(data, null, 2)
   });
   if (!resp.ok) {
     const errText = await resp.text().catch(() => '');
-    throw new Error('推送失败: HTTP ' + resp.status + (errText ? ' - ' + errText.substring(0, 200) : ''));
-  }
-  // 新创建的 blob，从响应头获取 ID
-  if (!cfg.blobId) {
-    const newId = resp.headers.get('X-jsonblob-id')
-      || resp.headers.get('Location')?.split('/').pop()
-      || '';
-    if (newId) {
-      cfg.blobId = newId;
-      saveSyncConfig(cfg);
-    }
+    throw new Error('HTTP ' + resp.status + (errText ? ' - ' + errText.substring(0, 200) : ''));
   }
   return true;
 }
@@ -3824,62 +3807,14 @@ function toggleSyncConfigPanel() {
   const panel = document.getElementById('sync-config-panel');
   const isHidden = panel.style.display === 'none';
   panel.style.display = isHidden ? 'block' : 'none';
-  if (isHidden) {
-    const cfg = getSyncConfig();
-    document.getElementById('sync-blobid').value = cfg.blobId || '';
-    updateSyncConfigStatus();
-  }
-}
-
-// 从 UI 保存配置
-function saveSyncConfigFromUI() {
-  const blobId = document.getElementById('sync-blobid').value.trim();
-  saveSyncConfig({
-    blobId: blobId,
-    enabled: !!blobId
-  });
-  updateSyncConfigStatus();
-}
-
-// 清除配置
-function clearSyncConfig() {
-  saveSyncConfig({ blobId: '', enabled: false });
-  document.getElementById('sync-blobid').value = '';
-  updateSyncConfigStatus();
-  showToast('已清除配置');
+  if (isHidden) updateSyncConfigStatus();
 }
 
 // 更新配置状态显示
 function updateSyncConfigStatus() {
   const statusEl = document.getElementById('sync-config-status');
   if (!statusEl) return;
-  const cfg = getSyncConfig();
-  if (isSyncConfigured()) {
-    statusEl.innerHTML = '<span style="color:var(--success)">✅ 已配置 · Blob: ' + cfg.blobId.substring(0, 8) + '...</span>';
-  } else {
-    statusEl.innerHTML = '<span style="color:var(--warning)">⚠️ 点击「初始化」自动创建云端存储</span>';
-  }
-}
-
-// 一键初始化：创建新 Blob 并保存 ID
-async function initCloudSync() {
-  showSyncStatus('⏳ 正在初始化云端存储...', 'info');
-  try {
-    // 推送空数据创建 Blob
-    const emptyData = getSyncPayload();
-    await pushToCloud(emptyData);
-    const cfg = getSyncConfig();
-    if (cfg.blobId) {
-      document.getElementById('sync-blobid').value = cfg.blobId;
-      updateSyncConfigStatus();
-      showSyncStatus('✅ 云端已初始化！Blob ID: ' + cfg.blobId, 'success');
-      showToast('✅ 云端存储已创建');
-    } else {
-      showSyncStatus('❌ 初始化失败：未获取到 Blob ID，可能是网络问题或被防火墙拦截', 'error');
-    }
-  } catch (e) {
-    showSyncStatus('❌ 初始化失败: ' + e.message + '（提示：如果看到 loadfailed，请尝试切换网络/关闭 VPN 后重试）', 'error');
-  }
+  statusEl.innerHTML = '<span style="color:var(--success)">✅ 已预置 · Bin: ' + JSONBIN_BIN_ID.substring(0, 8) + '...</span>';
 }
 
 // 同步状态
