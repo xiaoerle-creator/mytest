@@ -1999,7 +1999,6 @@ function switchDBMode(mode) {
   }
   // 刷新首页统计
   updateHomeStats();
-  updateSubjectProgress();
   // 更新按钮高亮
   document.querySelectorAll('.db-mode-btn').forEach(btn => {
     const isCurrent = btn.dataset.mode === mode;
