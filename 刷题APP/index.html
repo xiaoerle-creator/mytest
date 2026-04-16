@@ -1778,25 +1778,25 @@ textarea.api-input {
           </div>
           <div id="sync-status" style="margin-top:10px;font-size:13px"></div>
 
-          <!-- JSONBin 配置（折叠） -->
+          <!-- 云端同步配置（折叠） -->
           <div id="sync-config-panel" style="display:none;margin-top:12px;background:var(--gray-50);border-radius:8px;padding:12px;border:1px solid var(--gray-200)">
             <div style="font-size:12px;color:var(--gray-600);margin-bottom:10px;line-height:1.7">
-              使用 <strong>JSONBin.io</strong> 进行云同步：
-              <br>1. 前往 <a href="https://jsonbin.io/" target="_blank">jsonbin.io</a> 注册账号
-              <br>2. 在 API Keys 页面获取 Master Key
-              <br>3. 填入下方 Key 即可（Bin ID 会自动创建）
+              使用 <strong>JSONBlob.com</strong> 进行云同步（免费、无需注册、支持跨域）：
+              <br>1. 点击下方「初始化」按钮，自动创建云端存储
+              <br>2. 首次使用后 Blob ID 会自动保存
+              <br>3. 跨设备只需填入同一个 Blob ID 即可同步
+            </div>
+
+            <div style="display:flex;gap:8px;margin-bottom:10px">
+              <button class="btn btn-sm" style="background:#2563eb;color:white;border:none;border-radius:6px;padding:8px 16px;font-size:12px;font-weight:600" onclick="initCloudSync()">🚀 一键初始化</button>
             </div>
 
             <div style="margin-bottom:10px">
-              <label style="font-size:12px;color:var(--gray-600);display:block;margin-bottom:4px">JSONBin API Key</label>
-              <input id="jsonbin-apikey" type="text" class="api-input" placeholder="粘贴你的 Master Key（$2a$10$...）" style="font-size:12px;font-family:monospace" oninput="saveJSONBinConfigFromUI()">
-            </div>
-            <div style="margin-bottom:10px">
-              <label style="font-size:12px;color:var(--gray-600);display:block;margin-bottom:4px">Bin ID（自动创建，也可手动填写已有ID）</label>
-              <input id="jsonbin-binid" type="text" class="api-input" placeholder="自动创建，或填写已有 Bin ID" style="font-size:12px;font-family:monospace" oninput="saveJSONBinConfigFromUI()">
+              <label style="font-size:12px;color:var(--gray-600);display:block;margin-bottom:4px">Blob ID（初始化后自动填写，跨设备需手动填入）</label>
+              <input id="sync-blobid" type="text" class="api-input" placeholder="点击「一键初始化」自动生成" style="font-size:12px;font-family:monospace" oninput="saveSyncConfigFromUI()">
             </div>
             <div style="display:flex;gap:8px">
-              <button class="btn btn-danger btn-sm" onclick="clearJSONBinConfig()">🗑️ 清除配置</button>
+              <button class="btn btn-danger btn-sm" onclick="clearSyncConfig()">🗑️ 清除配置</button>
             </div>
             <div id="sync-config-status" style="margin-top:8px;font-size:12px;color:var(--gray-500)"></div>
           </div>
@@ -3739,145 +3739,110 @@ function updateAIType() {
   baseUrlRow.style.display = (t === 'custom' || t === 'qwen') ? 'block' : 'none';
 }
 
-// ========== 数据同步（JSONBin.io）==========
+// ========== 数据同步（JSONBlob.com — 免费、无需注册、原生 CORS）==========
 
-const JSONBIN_API = 'https://api.jsonbin.io/v3';
-const JSONBIN_BIN_NAME = 'zhuzhibiguo-sync';
+const JSONBLOB_API = 'https://jsonblob.com/api/jsonBlob';
 
-// 获取 JSONBin 配置（已内置 API Key 和 Bin ID）
-function getJSONBinConfig() {
-  return DB.get('jsonbinConfig', {
-    apiKey: '$2a$10$OpuDazWjrN3AYKcG9kK01.eW0UZNFElG2u5L8BAxdM3a/uURZEu8S',
-    binId: '69d311b936566621a8819078',
-    enabled: true
+// 获取同步配置
+function getSyncConfig() {
+  return DB.get('syncConfig', {
+    blobId: '',
+    enabled: false
   });
 }
 
-// 保存 JSONBin 配置
-function saveJSONBinConfig(config) {
-  DB.set('jsonbinConfig', config);
+// 保存同步配置
+function saveSyncConfig(config) {
+  DB.set('syncConfig', config);
 }
 
-// 检查是否已配置 JSONBin
-function isJSONBinConfigured() {
-  const cfg = getJSONBinConfig();
-  return cfg.enabled && cfg.apiKey;
+// 检查是否已配置
+function isSyncConfigured() {
+  const cfg = getSyncConfig();
+  return cfg.enabled && cfg.blobId;
 }
 
-// 兼容旧代码中的 isWebDAVConfigured 调用
-function isWebDAVConfigured() {
-  return isJSONBinConfigured();
+// 兼容旧调用名
+function isJSONBinConfigured() { return isSyncConfigured(); }
+function isWebDAVConfigured() { return isSyncConfigured(); }
+function getJSONBinConfig() { return getSyncConfig(); }
+function saveJSONBinConfig(c) { return saveSyncConfig(c); }
+
+// 拉取云端数据
+async function pullFromCloud() {
+  const cfg = getSyncConfig();
+  if (!cfg.blobId) return null;
+  const url = JSONBLOB_API + '/' + cfg.blobId;
+  const resp = await fetch(url, { method: 'GET', cache: 'no-cache' });
+  if (resp.status === 404) return null;
+  if (!resp.ok) throw new Error('拉取失败: HTTP ' + resp.status);
+  const text = await resp.text();
+  return text ? JSON.parse(text) : null;
 }
 
-// 从 JSONBin 拉取数据（通过 query parameter 传 Key，避免 CORS preflight）
-async function pullFromJSONBin(cfg) {
-  if (!cfg.binId) return null;
-
-  const url = JSONBIN_API + '/b/' + cfg.binId + '/latest' + '?meta=false&X-API-Key=' + encodeURIComponent(cfg.apiKey);
-  const response = await fetch(url, {
-    method: 'GET',
-    mode: 'cors',
-    cache: 'no-cache'
-  });
-
-  if (response.status === 404) {
-    return null;
-  }
-
-  if (!response.ok) {
-    const errBody = await response.text().catch(() => '');
-    throw new Error('拉取失败: HTTP ' + response.status + (errBody ? ' - ' + errBody.substring(0, 200) : ''));
-  }
-
-  const content = await response.text();
-  return content ? JSON.parse(content) : null;
-}
-
-// 兼容旧代码中的 pullFromWebDAV 调用
-async function pullFromWebDAV() {
-  const cfg = getJSONBinConfig();
-  return pullFromJSONBin(cfg);
-}
-
-// 推送数据到 JSONBin（通过 query parameter 传 Key，避免 CORS preflight）
-async function pushToJSONBin(cfg, data) {
+// 推送数据到云端（无 blobId 则创建新的）
+async function pushToCloud(data) {
+  const cfg = getSyncConfig();
   let url, method;
-
-  if (cfg.binId) {
-    url = JSONBIN_API + '/b/' + cfg.binId + '?name=' + encodeURIComponent(JSONBIN_BIN_NAME) + '&X-API-Key=' + encodeURIComponent(cfg.apiKey);
+  if (cfg.blobId) {
+    url = JSONBLOB_API + '/' + cfg.blobId;
     method = 'PUT';
   } else {
-    url = JSONBIN_API + '/b?name=' + encodeURIComponent(JSONBIN_BIN_NAME) + '&private=true&X-API-Key=' + encodeURIComponent(cfg.apiKey);
+    url = JSONBLOB_API;
     method = 'POST';
   }
-
-  const response = await fetch(url, {
+  const resp = await fetch(url, {
     method: method,
-    mode: 'cors',
     cache: 'no-cache',
-    headers: {
-      'Content-Type': 'application/json'
-    },
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(data, null, 2)
   });
-
-  if (!response.ok) {
-    const errBody = await response.text().catch(() => '');
-    throw new Error('推送失败: HTTP ' + response.status + (errBody ? ' - ' + errBody.substring(0, 200) : ''));
-  }
-
-  // 如果是新创建的 bin，保存 binId
-  if (!cfg.binId) {
-    const result = await response.json();
-    if (result.metadata && result.metadata.id) {
-      cfg.binId = result.metadata.id;
-      saveJSONBinConfig(cfg);
+  if (!resp.ok) throw new Error('推送失败: HTTP ' + resp.status);
+  // 新创建的 blob，从响应头获取 ID
+  if (!cfg.blobId) {
+    const newId = resp.headers.get('X-jsonblob-id')
+      || resp.headers.get('Location')?.split('/').pop()
+      || '';
+    if (newId) {
+      cfg.blobId = newId;
+      saveSyncConfig(cfg);
     }
   }
-
   return true;
 }
 
-// 兼容旧代码中的 pushToWebDAV 调用
-async function pushToWebDAV(data) {
-  const cfg = getJSONBinConfig();
-  return pushToJSONBin(cfg, data);
-}
+// 兼容旧调用名
+async function pullFromJSONBin() { return pullFromCloud(); }
+async function pushToJSONBin(c, d) { return pushToCloud(d); }
+async function pullFromWebDAV() { return pullFromCloud(); }
+async function pushToWebDAV(d) { return pushToCloud(d); }
 
-// 折叠/展开 JSONBin 配置面板
+// 折叠/展开同步配置面板
 function toggleSyncConfigPanel() {
   const panel = document.getElementById('sync-config-panel');
   const isHidden = panel.style.display === 'none';
   panel.style.display = isHidden ? 'block' : 'none';
   if (isHidden) {
-    const cfg = getJSONBinConfig();
-    document.getElementById('jsonbin-apikey').value = cfg.apiKey || '';
-    document.getElementById('jsonbin-binid').value = cfg.binId || '';
+    const cfg = getSyncConfig();
+    document.getElementById('sync-blobid').value = cfg.blobId || '';
     updateSyncConfigStatus();
   }
 }
 
-// 从 UI 保存 JSONBin 配置
-function saveJSONBinConfigFromUI() {
-  const apiKey = document.getElementById('jsonbin-apikey').value.trim();
-  const binId = document.getElementById('jsonbin-binid').value.trim();
-  saveJSONBinConfig({
-    apiKey: apiKey,
-    binId: binId,
-    enabled: !!apiKey
+// 从 UI 保存配置
+function saveSyncConfigFromUI() {
+  const blobId = document.getElementById('sync-blobid').value.trim();
+  saveSyncConfig({
+    blobId: blobId,
+    enabled: !!blobId
   });
   updateSyncConfigStatus();
 }
 
-// 清除 JSONBin 配置
-function clearJSONBinConfig() {
-  saveJSONBinConfig({
-    apiKey: '',
-    binId: '',
-    enabled: false
-  });
-  document.getElementById('jsonbin-apikey').value = '';
-  document.getElementById('jsonbin-binid').value = '';
+// 清除配置
+function clearSyncConfig() {
+  saveSyncConfig({ blobId: '', enabled: false });
+  document.getElementById('sync-blobid').value = '';
   updateSyncConfigStatus();
   showToast('已清除配置');
 }
@@ -3886,14 +3851,32 @@ function clearJSONBinConfig() {
 function updateSyncConfigStatus() {
   const statusEl = document.getElementById('sync-config-status');
   if (!statusEl) return;
-  const cfg = getJSONBinConfig();
-  if (isJSONBinConfigured()) {
-    const maskedKey = cfg.apiKey.substring(0, 8) + '...';
-    const binInfo = cfg.binId ? 'Bin: ' + cfg.binId.substring(0, 8) + '...' : 'Bin: 待创建';
-    statusEl.innerHTML = '<span style="color:var(--success)">✅ 已配置 · ' + maskedKey + ' · ' + binInfo + '</span>';
+  const cfg = getSyncConfig();
+  if (isSyncConfigured()) {
+    statusEl.innerHTML = '<span style="color:var(--success)">✅ 已配置 · Blob: ' + cfg.blobId.substring(0, 8) + '...</span>';
   } else {
-    statusEl.innerHTML = '<span style="color:var(--warning)">⚠️ 请先配置 JSONBin API Key</span>';
+    statusEl.innerHTML = '<span style="color:var(--warning)">⚠️ 点击「初始化」自动创建云端存储</span>';
   }
+}
+
+// 一键初始化：创建新 Blob 并保存 ID
+async function initCloudSync() {
+  showSyncStatus('⏳ 正在初始化云端存储...', 'info');
+  try {
+    // 推送空数据创建 Blob
+    const emptyData = getSyncPayload();
+    await pushToCloud(emptyData);
+    const cfg = getSyncConfig();
+    if (cfg.blobId) {
+      document.getElementById('sync-blobid').value = cfg.blobId;
+      updateSyncConfigStatus();
+      showSyncStatus('✅ 云端已初始化！Blob ID: ' + cfg.blobId, 'success');
+      showToast('✅ 云端存储已创建');
+    }
+  } catch (e) {
+    showSyncStatus('❌ 初始化失败: ' + e.message, 'error');
+  }
+}
 }
 
 // 同步状态
@@ -4005,15 +3988,11 @@ function mergeCloudData(cloudData) {
 // 从云端拉取数据（APP打开时自动调用）
 async function autoSyncPull() {
   if (SYNC_STATE.isSyncing) return;
-  if (!isJSONBinConfigured()) {
-    showSyncStatus('⚠️ 请先配置 JSONBin API Key', 'warning');
-    return;
-  }
+  if (!isSyncConfigured()) return;
   SYNC_STATE.isSyncing = true;
 
   try {
-    const cfg = getJSONBinConfig();
-    const cloudData = await pullFromJSONBin(cfg);
+    const cloudData = await pullFromCloud();
     
     if (cloudData && ((cloudData.answerHistory && Object.keys(cloudData.answerHistory).length > 0)
         || (cloudData.answerHistory_dingxin && Object.keys(cloudData.answerHistory_dingxin).length > 0))) {
@@ -4049,15 +4028,13 @@ function autoSyncPush() {
   // 30秒防抖：连续答题只上传一次
   SYNC_STATE.pendingPush = setTimeout(async () => {
     if (SYNC_STATE.isSyncing) return;
-    
-    const cfg = getJSONBinConfig();
-    if (!cfg.enabled || !cfg.apiKey) return;
+    if (!isSyncConfigured()) return;
     
     SYNC_STATE.isSyncing = true;
 
     try {
       const payload = getSyncPayload();
-      await pushToJSONBin(cfg, payload);
+      await pushToCloud(payload);
 
       SYNC_STATE.lastPushTime = Date.now();
       // 更新同步页面状态
@@ -4085,25 +4062,23 @@ async function manualSyncNow() {
     showToast('⏳ 正在同步中...');
     return;
   }
-  if (!isJSONBinConfigured()) {
-    showSyncStatus('⚠️ 请先配置 JSONBin API Key', 'warning');
+  if (!isSyncConfigured()) {
+    showSyncStatus('⚠️ 请先初始化云端存储', 'warning');
     return;
   }
   SYNC_STATE.isSyncing = true;
   showSyncStatus('⏳ 正在同步...', 'info');
 
   try {
-    const cfg = getJSONBinConfig();
-    
     // 先拉取云端数据
-    const cloudData = await pullFromJSONBin(cfg);
+    const cloudData = await pullFromCloud();
     if (cloudData && (cloudData.answerHistory || cloudData.answerHistory_dingxin)) {
       mergeCloudData(cloudData);
     }
 
     // 上传当前数据
     const payload = getSyncPayload();
-    await pushToJSONBin(cfg, payload);
+    await pushToCloud(payload);
 
     SYNC_STATE.lastPullTime = Date.now();
     SYNC_STATE.lastPushTime = Date.now();
