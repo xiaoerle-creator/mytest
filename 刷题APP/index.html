@@ -3769,17 +3769,15 @@ function isWebDAVConfigured() {
   return isJSONBinConfigured();
 }
 
-// 从 JSONBin 拉取数据
+// 从 JSONBin 拉取数据（通过 query parameter 传 Key，避免 CORS preflight）
 async function pullFromJSONBin(cfg) {
   if (!cfg.binId) return null;
 
-  const url = JSONBIN_API + '/b/' + cfg.binId + '/latest';
+  const url = JSONBIN_API + '/b/' + cfg.binId + '/latest' + '?meta=false&X-API-Key=' + encodeURIComponent(cfg.apiKey);
   const response = await fetch(url, {
     method: 'GET',
-    headers: {
-      'X-Master-Key': cfg.apiKey,
-      'X-Bin-Meta': 'false'
-    }
+    mode: 'cors',
+    cache: 'no-cache'
   });
 
   if (response.status === 404) {
@@ -3787,7 +3785,8 @@ async function pullFromJSONBin(cfg) {
   }
 
   if (!response.ok) {
-    throw new Error('拉取失败: HTTP ' + response.status);
+    const errBody = await response.text().catch(() => '');
+    throw new Error('拉取失败: HTTP ' + response.status + (errBody ? ' - ' + errBody.substring(0, 200) : ''));
   }
 
   const content = await response.text();
@@ -3800,33 +3799,31 @@ async function pullFromWebDAV() {
   return pullFromJSONBin(cfg);
 }
 
-// 推送数据到 JSONBin（有 binId 则更新，无则创建）
+// 推送数据到 JSONBin（通过 query parameter 传 Key，避免 CORS preflight）
 async function pushToJSONBin(cfg, data) {
   let url, method;
 
   if (cfg.binId) {
-    // 更新已有 bin
-    url = JSONBIN_API + '/b/' + cfg.binId;
+    url = JSONBIN_API + '/b/' + cfg.binId + '?name=' + encodeURIComponent(JSONBIN_BIN_NAME) + '&X-API-Key=' + encodeURIComponent(cfg.apiKey);
     method = 'PUT';
   } else {
-    // 创建新 bin
-    url = JSONBIN_API + '/b';
+    url = JSONBIN_API + '/b?name=' + encodeURIComponent(JSONBIN_BIN_NAME) + '&private=true&X-API-Key=' + encodeURIComponent(cfg.apiKey);
     method = 'POST';
   }
 
   const response = await fetch(url, {
     method: method,
+    mode: 'cors',
+    cache: 'no-cache',
     headers: {
-      'Content-Type': 'application/json',
-      'X-Master-Key': cfg.apiKey,
-      'X-Bin-Name': JSONBIN_BIN_NAME,
-      'X-Bin-Private': 'true'
+      'Content-Type': 'application/json'
     },
     body: JSON.stringify(data, null, 2)
   });
 
   if (!response.ok) {
-    throw new Error('推送失败: HTTP ' + response.status);
+    const errBody = await response.text().catch(() => '');
+    throw new Error('推送失败: HTTP ' + response.status + (errBody ? ' - ' + errBody.substring(0, 200) : ''));
   }
 
   // 如果是新创建的 bin，保存 binId
