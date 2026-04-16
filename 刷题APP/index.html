@@ -3796,7 +3796,10 @@ async function pushToCloud(data) {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(data, null, 2)
   });
-  if (!resp.ok) throw new Error('推送失败: HTTP ' + resp.status);
+  if (!resp.ok) {
+    const errText = await resp.text().catch(() => '');
+    throw new Error('推送失败: HTTP ' + resp.status + (errText ? ' - ' + errText.substring(0, 200) : ''));
+  }
   // 新创建的 blob，从响应头获取 ID
   if (!cfg.blobId) {
     const newId = resp.headers.get('X-jsonblob-id')
@@ -3871,9 +3874,11 @@ async function initCloudSync() {
       updateSyncConfigStatus();
       showSyncStatus('✅ 云端已初始化！Blob ID: ' + cfg.blobId, 'success');
       showToast('✅ 云端存储已创建');
+    } else {
+      showSyncStatus('❌ 初始化失败：未获取到 Blob ID，可能是网络问题或被防火墙拦截', 'error');
     }
   } catch (e) {
-    showSyncStatus('❌ 初始化失败: ' + e.message, 'error');
+    showSyncStatus('❌ 初始化失败: ' + e.message + '（提示：如果看到 loadfailed，请尝试切换网络/关闭 VPN 后重试）', 'error');
   }
 }
 
