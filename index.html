@@ -3844,9 +3844,23 @@ function getSyncPayload() {
     ? answerHistory
     : DB.get('answerHistory_dingxin', {});
 
+  // 精简答题记录：只保留同步所需字段（去掉冗余数据，控制在 100KB 以内）
+  const slim = (records) => {
+    const out = {};
+    for (const [qid, rec] of Object.entries(records)) {
+      out[qid] = {
+        a: rec.answer,
+        c: rec.correct ? 1 : 0,
+        t: rec.timestamp || Date.now(),
+        w: rec.wrongCount || 0
+      };
+    }
+    return out;
+  };
+
   return {
-    answerHistory:         ahPlatinum,
-    answerHistory_dingxin: ahDingxin,
+    answerHistory:         slim(ahPlatinum),
+    answerHistory_dingxin: slim(ahDingxin),
     examRecords,
     favorites,
     timestamp: Date.now()
@@ -3854,6 +3868,19 @@ function getSyncPayload() {
 }
 
 // ---------- 通用合并逻辑（供两种方式共用）----------
+// 兼容精简格式（a/c/t/w）和完整格式（answer/correct/timestamp/wrongCount）
+function normalizeRec(rec) {
+  if (!rec) return null;
+  if (rec.answer !== undefined) return rec; // 完整格式
+  // 精简格式 → 完整格式
+  return {
+    answer: rec.a,
+    correct: rec.c === 1,
+    timestamp: rec.t,
+    wrongCount: rec.w || 0
+  };
+}
+
 function mergeCloudData(cloudData) {
   const myData = cloudData;
 
@@ -3862,16 +3889,18 @@ function mergeCloudData(cloudData) {
   const mergedPlatinum = { ...localPlatinum };
   if (myData.answerHistory) {
     Object.entries(myData.answerHistory).forEach(([qid, cloudRec]) => {
+      const cRec = normalizeRec(cloudRec);
+      if (!cRec) return;
       const localRec = mergedPlatinum[qid];
-      if (!localRec || (cloudRec.timestamp || 0) > (localRec.timestamp || 0)) {
+      if (!localRec || (cRec.timestamp || 0) > (localRec.timestamp || 0)) {
         mergedPlatinum[qid] = {
-          ...cloudRec,
-          wrongCount: Math.max(cloudRec.wrongCount || 0, localRec?.wrongCount || 0)
+          ...cRec,
+          wrongCount: Math.max(cRec.wrongCount || 0, localRec?.wrongCount || 0)
         };
       } else {
         mergedPlatinum[qid] = {
           ...localRec,
-          wrongCount: Math.max(localRec.wrongCount || 0, cloudRec.wrongCount || 0)
+          wrongCount: Math.max(localRec.wrongCount || 0, cRec.wrongCount || 0)
         };
       }
     });
@@ -3882,16 +3911,18 @@ function mergeCloudData(cloudData) {
   const mergedDingxin = { ...localDingxin };
   if (myData.answerHistory_dingxin) {
     Object.entries(myData.answerHistory_dingxin).forEach(([qid, cloudRec]) => {
+      const cRec = normalizeRec(cloudRec);
+      if (!cRec) return;
       const localRec = mergedDingxin[qid];
-      if (!localRec || (cloudRec.timestamp || 0) > (localRec.timestamp || 0)) {
+      if (!localRec || (cRec.timestamp || 0) > (localRec.timestamp || 0)) {
         mergedDingxin[qid] = {
-          ...cloudRec,
-          wrongCount: Math.max(cloudRec.wrongCount || 0, localRec?.wrongCount || 0)
+          ...cRec,
+          wrongCount: Math.max(cRec.wrongCount || 0, localRec?.wrongCount || 0)
         };
       } else {
         mergedDingxin[qid] = {
           ...localRec,
-          wrongCount: Math.max(localRec.wrongCount || 0, cloudRec.wrongCount || 0)
+          wrongCount: Math.max(localRec.wrongCount || 0, cRec.wrongCount || 0)
         };
       }
     });
