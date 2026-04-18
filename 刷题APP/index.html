@@ -6,34 +6,40 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="主治必过">
-<meta name="theme-color" content="#2563eb">
+<meta name="theme-color" content="#6366f1">
 <title>主治必过 · 口腔医学中级刷题</title>
 <style>
 /* ============ CSS变量 & 基础样式 ============ */
 :root {
-  --primary: #2563eb;
-  --primary-dark: #1d4ed8;
-  --primary-light: #dbeafe;
-  --success: #16a34a;
-  --success-light: #dcfce7;
-  --danger: #dc2626;
-  --danger-light: #fee2e2;
-  --warning: #d97706;
-  --warning-light: #fef3c7;
-  --gray-50: #f9fafb;
-  --gray-100: #f3f4f6;
-  --gray-200: #e5e7eb;
-  --gray-300: #d1d5db;
-  --gray-400: #9ca3af;
-  --gray-500: #6b7280;
-  --gray-600: #4b5563;
-  --gray-700: #374151;
-  --gray-800: #1f2937;
-  --gray-900: #111827;
-  --radius: 12px;
-  --shadow: 0 1px 3px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.08);
-  --shadow-md: 0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -1px rgba(0,0,0,0.06);
-  --shadow-lg: 0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -2px rgba(0,0,0,0.05);
+  --primary: #6366f1;
+  --primary-dark: #4f46e5;
+  --primary-light: #eef2ff;
+  --primary-gradient: linear-gradient(135deg, #6366f1 0%, #8b5cf6 50%, #a78bfa 100%);
+  --accent: #f472b6;
+  --accent-light: #fce7f3;
+  --success: #10b981;
+  --success-light: #ecfdf5;
+  --danger: #f43f5e;
+  --danger-light: #fff1f2;
+  --warning: #f59e0b;
+  --warning-light: #fffbeb;
+  --gray-50: #fafafa;
+  --gray-100: #f4f4f5;
+  --gray-200: #e4e4e7;
+  --gray-300: #d4d4d8;
+  --gray-400: #a1a1aa;
+  --gray-500: #71717a;
+  --gray-600: #52525b;
+  --gray-700: #3f3f46;
+  --gray-800: #27272a;
+  --gray-900: #18181b;
+  --radius: 16px;
+  --radius-sm: 12px;
+  --radius-full: 999px;
+  --shadow: 0 2px 8px rgba(99,102,241,0.06), 0 1px 3px rgba(0,0,0,0.04);
+  --shadow-md: 0 8px 24px rgba(99,102,241,0.08), 0 2px 8px rgba(0,0,0,0.04);
+  --shadow-lg: 0 16px 40px rgba(99,102,241,0.10), 0 4px 12px rgba(0,0,0,0.04);
+  --shadow-glow: 0 0 20px rgba(99,102,241,0.15);
 }
 
 * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; -webkit-touch-callout: none; }
@@ -46,7 +52,7 @@
 
 body {
   font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Microsoft YaHei', sans-serif;
-  background: #f0f4ff;
+  background: linear-gradient(180deg, #f5f3ff 0%, #eef2ff 30%, #f0f9ff 100%);
   color: var(--gray-800);
   /* iOS Safari 兼容：100dvh 避免虚拟键盘撑开页面，fallback 到 100vh */
   min-height: 100vh;
@@ -61,7 +67,7 @@ body {
 
 /* ============ 顶部导航 ============ */
 .nav-header {
-  background: linear-gradient(135deg, #1e40af 0%, #2563eb 100%);
+  background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 40%, #a78bfa 100%);
   color: white;
   padding: 0;
   position: sticky;
@@ -86,6 +92,10 @@ body {
   font-size: 18px;
   font-weight: 700;
   letter-spacing: 0.5px;
+  background: linear-gradient(90deg, #fff, #e0e7ff);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
 }
 
 .nav-subtitle {
@@ -115,15 +125,17 @@ body {
 /* 底部Tab导航 */
 .tab-bar {
   display: flex;
-  background: white;
-  border-top: 1px solid var(--gray-200);
+  background: rgba(255,255,255,0.85);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-top: 1px solid rgba(99,102,241,0.08);
   position: fixed;
   bottom: 0;
   left: 0;
   right: 0;
   z-index: 100;
   padding-bottom: env(safe-area-inset-bottom);
-  box-shadow: 0 -2px 10px rgba(0,0,0,0.08);
+  box-shadow: 0 -4px 20px rgba(99,102,241,0.06);
   /* 横屏刘海适配 */
   padding-left: env(safe-area-inset-left);
   padding-right: env(safe-area-inset-right);
@@ -161,7 +173,8 @@ body {
 }
 
 .tab-item.active .tab-label { color: var(--primary); font-weight: 700; }
-.tab-item.active .tab-icon { transform: scale(1.1); }
+.tab-item.active .tab-icon { transform: scale(1.15); }
+.tab-item.active::after { content: ''; position: absolute; bottom: 4px; left: 50%; transform: translateX(-50%); width: 20px; height: 3px; background: var(--primary-gradient); border-radius: 2px; }
 
 .tab-item .badge {
   position: absolute;
@@ -191,23 +204,26 @@ body {
   margin: 0 auto;
 }
 
-.page { display: none; animation: fadeIn 0.3s ease; }
+.page { display: none; animation: fadeIn 0.4s cubic-bezier(0.34, 1.56, 0.64, 1); }
 .page.active { display: block; }
 
-@keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes fadeIn { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
 
 /* ============ 卡片组件 ============ */
 .card {
-  background: white;
+  background: rgba(255,255,255,0.9);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
   border-radius: var(--radius);
   box-shadow: var(--shadow);
   overflow: hidden;
   margin-bottom: 12px;
+  border: 1px solid rgba(99,102,241,0.04);
 }
 
 .card-header {
   padding: 14px 16px;
-  border-bottom: 1px solid var(--gray-100);
+  border-bottom: 1px solid rgba(99,102,241,0.06);
   display: flex;
   align-items: center;
   gap: 8px;
@@ -230,23 +246,29 @@ body {
 }
 
 .stat-card {
-  background: white;
+  background: rgba(255,255,255,0.9);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
   border-radius: var(--radius);
   padding: 14px;
   box-shadow: var(--shadow);
   text-align: center;
   cursor: pointer;
-  transition: transform 0.2s, box-shadow 0.2s;
-  border: 2px solid transparent;
+  transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.3s;
+  border: 1.5px solid rgba(99,102,241,0.06);
 }
 
-.stat-card:hover, .stat-card:active { transform: translateY(-2px); box-shadow: var(--shadow-md); }
+.stat-card:hover, .stat-card:active { transform: translateY(-3px); box-shadow: var(--shadow-md), var(--shadow-glow); }
 
 .stat-num {
   font-size: 28px;
   font-weight: 800;
   line-height: 1;
   margin-bottom: 4px;
+  background: var(--primary-gradient);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
 }
 
 .stat-label { font-size: 12px; color: var(--gray-500); }
@@ -259,23 +281,26 @@ body {
 }
 
 .subject-card {
-  background: white;
+  background: rgba(255,255,255,0.9);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
   border-radius: var(--radius);
   padding: 14px;
   box-shadow: var(--shadow);
   cursor: pointer;
-  transition: all 0.2s;
+  transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
   border-left: 4px solid var(--primary);
   position: relative;
   overflow: hidden;
+  border-top: none; border-right: none; border-bottom: none;
 }
 
-.subject-card:nth-child(1) { border-left-color: #2563eb; }
-.subject-card:nth-child(2) { border-left-color: #7c3aed; }
-.subject-card:nth-child(3) { border-left-color: #059669; }
-.subject-card:nth-child(4) { border-left-color: #dc2626; }
+.subject-card:nth-child(1) { border-left-color: #6366f1; }
+.subject-card:nth-child(2) { border-left-color: #8b5cf6; }
+.subject-card:nth-child(3) { border-left-color: #10b981; }
+.subject-card:nth-child(4) { border-left-color: #f43f5e; }
 
-.subject-card:hover { transform: translateY(-2px); box-shadow: var(--shadow-md); }
+.subject-card:hover { transform: translateY(-3px); box-shadow: var(--shadow-md), var(--shadow-glow); }
 
 .subject-name { font-size: 14px; font-weight: 700; margin-bottom: 6px; }
 
@@ -289,15 +314,15 @@ body {
 
 .progress-fill {
   height: 100%;
-  background: linear-gradient(90deg, var(--primary), #60a5fa);
+  background: linear-gradient(90deg, #6366f1, #a78bfa);
   border-radius: 3px;
   transition: width 0.5s ease;
 }
 
-.subject-card:nth-child(1) .progress-fill { background: linear-gradient(90deg, #2563eb, #60a5fa); }
-.subject-card:nth-child(2) .progress-fill { background: linear-gradient(90deg, #7c3aed, #a78bfa); }
-.subject-card:nth-child(3) .progress-fill { background: linear-gradient(90deg, #059669, #34d399); }
-.subject-card:nth-child(4) .progress-fill { background: linear-gradient(90deg, #dc2626, #f87171); }
+.subject-card:nth-child(1) .progress-fill { background: linear-gradient(90deg, #6366f1, #a78bfa); }
+.subject-card:nth-child(2) .progress-fill { background: linear-gradient(90deg, #8b5cf6, #c4b5fd); }
+.subject-card:nth-child(3) .progress-fill { background: linear-gradient(90deg, #10b981, #6ee7b7); }
+.subject-card:nth-child(4) .progress-fill { background: linear-gradient(90deg, #f43f5e, #fb7185); }
 
 .subject-stats { font-size: 11px; color: var(--gray-400); display: flex; justify-content: space-between; }
 
@@ -311,9 +336,9 @@ body {
 
 .subject-btn {
   padding: 10px 18px; /* 增大触控区域 */
-  border-radius: 20px;
+  border-radius: var(--radius-full);
   border: 2px solid var(--gray-200);
-  background: white;
+  background: rgba(255,255,255,0.9);
   font-size: 13px;
   font-weight: 600;
   cursor: pointer;
@@ -330,18 +355,21 @@ body {
 .subject-btn.active, .subject-btn:hover {
   border-color: var(--primary);
   background: var(--primary-light);
-  color: var(--primary-dark);
+  color: #4f46e5;
 }
 
 .question-card {
-  background: white;
+  background: rgba(255,255,255,0.95);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
   border-radius: var(--radius);
-  box-shadow: var(--shadow);
+  box-shadow: var(--shadow-md);
   overflow: hidden;
+  border: 1px solid rgba(99,102,241,0.06);
 }
 
 .q-header {
-  background: linear-gradient(135deg, #1e40af 0%, #2563eb 100%);
+  background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 40%, #a78bfa 100%);
   color: white;
   padding: 12px 16px;
   display: flex;
@@ -376,10 +404,10 @@ body {
   align-items: flex-start;
   padding: 14px 16px; /* 增大点击区域 */
   border: 2px solid var(--gray-200);
-  border-radius: 10px;
+  border-radius: var(--radius-sm);
   cursor: pointer;
-  transition: all 0.15s;
-  background: white;
+  transition: all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+  background: rgba(255,255,255,0.9);
   font-family: inherit;
   text-align: left;
   width: 100%;
@@ -390,13 +418,13 @@ body {
   min-height: 48px;
 }
 
-.option-item:hover { border-color: var(--primary); background: var(--primary-light); }
-.option-item:active { transform: scale(0.98); background: #dbeafe; }
+.option-item:hover { border-color: var(--primary); background: var(--primary-light); box-shadow: 0 4px 12px rgba(99,102,241,0.08); }
+.option-item:active { transform: scale(0.97); }
 
 .option-key {
   width: 28px;
   height: 28px;
-  border-radius: 50%;
+  border-radius: 10px;
   background: var(--gray-100);
   display: flex;
   align-items: center;
@@ -419,22 +447,22 @@ body {
 
 /* 选项状态 */
 .option-item.correct {
-  border-color: var(--success);
-  background: var(--success-light);
+  border-color: #10b981;
+  background: #ecfdf5;
 }
 
 .option-item.correct .option-key {
-  background: var(--success);
+  background: #10b981;
   color: white;
 }
 
 .option-item.wrong {
-  border-color: var(--danger);
-  background: var(--danger-light);
+  border-color: #f43f5e;
+  background: #fff1f2;
 }
 
 .option-item.wrong .option-key {
-  background: var(--danger);
+  background: #f43f5e;
   color: white;
 }
 
@@ -445,25 +473,25 @@ body {
   cursor: pointer;
 }
 .option-item.option-checkbox:hover {
-  border-color: var(--primary);
-  background: var(--primary-light);
+  border-color: #6366f1;
+  background: #eef2ff;
 }
 
 /* 考试模式：已选但未判断的状态 */
 .option-item.selected-single {
-  border-color: var(--primary);
-  background: var(--primary-light);
+  border-color: #6366f1;
+  background: #eef2ff;
 }
 .option-item.selected-single .option-key {
-  background: var(--primary);
+  background: linear-gradient(135deg, #6366f1, #8b5cf6);
   color: white;
 }
 .option-item.selected-multi {
-  border-color: var(--primary);
-  background: var(--primary-light);
+  border-color: #6366f1;
+  background: #eef2ff;
 }
 .option-item.selected-multi .option-key {
-  background: var(--primary);
+  background: linear-gradient(135deg, #6366f1, #8b5cf6);
   color: white;
 }
 
@@ -478,7 +506,7 @@ body {
 
 .answer-panel.show { display: block; animation: slideDown 0.3s ease; }
 
-@keyframes slideDown { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes slideDown { from { opacity: 0; transform: translateY(-8px) scale(0.98); } to { opacity: 1; transform: translateY(0) scale(1); } }
 
 .answer-result {
   padding: 10px 14px;
@@ -489,8 +517,8 @@ body {
   gap: 8px;
 }
 
-.answer-result.correct { background: var(--success-light); color: var(--success); }
-.answer-result.wrong { background: var(--danger-light); color: var(--danger); }
+.answer-result.correct { background: #ecfdf5; color: #10b981; }
+.answer-result.wrong { background: #fff1f2; color: #f43f5e; }
 
 .answer-explanation {
   padding: 12px 14px;
@@ -503,14 +531,14 @@ body {
 
 .knowledge-section {
   padding: 0;
-  background: #eff6ff;
-  border-top: 1px solid #bfdbfe;
+  background: linear-gradient(180deg, #eef2ff, #faf5ff);
+  border-top: 1px solid rgba(99,102,241,0.1);
 }
 
 .knowledge-title {
   font-size: 14px;
   font-weight: 700;
-  color: var(--primary-dark);
+  color: #4f46e5;
   margin: 0;
   padding: 12px 14px;
   display: flex;
@@ -534,7 +562,7 @@ body {
 
 /* 知识点六板块样式 */
 .kb-section {
-  border-top: 1px solid #dbeafe;
+  border-top: 1px solid rgba(99,102,241,0.08);
 }
 
 .kb-section:first-child {
@@ -555,11 +583,11 @@ body {
 }
 
 .kb-header:hover {
-  background: rgba(59, 130, 246, 0.06);
+  background: rgba(99, 102, 241, 0.08);
 }
 
 .kb-header:active {
-  background: rgba(59, 130, 246, 0.12);
+  background: rgba(99, 102, 241, 0.12);
   transform: scale(0.99);
 }
 
@@ -604,12 +632,12 @@ body {
 }
 
 /* 板块颜色区分 */
-.kb-section[data-type="core"] > .kb-header { background: rgba(59, 130, 246, 0.04); }
-.kb-section[data-type="related"] > .kb-header { background: rgba(139, 92, 246, 0.04); }
-.kb-section[data-type="warning"] > .kb-header { background: rgba(245, 158, 11, 0.04); }
-.kb-section[data-type="clinical"] > .kb-header { background: rgba(16, 185, 129, 0.04); }
-.kb-section[data-type="mnemonic"] > .kb-header { background: rgba(236, 72, 153, 0.04); }
-.kb-section[data-type="quiz"] > .kb-header { background: rgba(99, 102, 241, 0.04); }
+.kb-section[data-type="core"] > .kb-header { background: rgba(99, 102, 241, 0.05); }
+.kb-section[data-type="related"] > .kb-header { background: rgba(139, 92, 246, 0.05); }
+.kb-section[data-type="warning"] > .kb-header { background: rgba(245, 158, 11, 0.05); }
+.kb-section[data-type="clinical"] > .kb-header { background: rgba(16, 185, 129, 0.05); }
+.kb-section[data-type="mnemonic"] > .kb-header { background: rgba(236, 72, 153, 0.05); }
+.kb-section[data-type="quiz"] > .kb-header { background: rgba(99, 102, 241, 0.05); }
 
 /* 自测题样式 */
 .quiz-item {
@@ -617,7 +645,7 @@ body {
   padding: 10px 12px;
   background: #fff;
   border-radius: 8px;
-  border: 1px solid #e0e7ff;
+  border: 1px solid rgba(99,102,241,0.12);
   transition: border-color 0.2s;
 }
 
@@ -640,7 +668,7 @@ body {
   flex-shrink: 0;
   width: 20px;
   height: 20px;
-  background: #6366f1;
+  background: linear-gradient(135deg, #6366f1, #8b5cf6);
   color: #fff;
   border-radius: 50%;
   font-size: 11px;
@@ -665,7 +693,7 @@ body {
 }
 
 .quiz-item.revealed {
-  border-color: #a5b4fc;
+  border-color: rgba(99,102,241,0.3);
 }
 
 .quiz-hint {
@@ -687,12 +715,12 @@ body {
 
 .btn {
   padding: 12px 20px; /* 增大点击区域 */
-  border-radius: 8px;
+  border-radius: var(--radius-full);
   border: none;
   font-size: 14px;
   font-weight: 600;
   cursor: pointer;
-  transition: all 0.15s;
+  transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
   font-family: inherit;
   display: inline-flex;
   align-items: center;
@@ -704,10 +732,10 @@ body {
   min-height: 44px; /* Apple 推荐最小触控高度 */
 }
 
-.btn:active { transform: scale(0.97); }
+.btn:active { transform: scale(0.95); }
 
-.btn-primary { background: var(--primary); color: white; }
-.btn-primary:hover { background: var(--primary-dark); }
+.btn-primary { background: var(--primary-gradient); color: white; box-shadow: 0 4px 12px rgba(99,102,241,0.3); }
+.btn-primary:hover { box-shadow: 0 6px 20px rgba(99,102,241,0.4); transform: translateY(-1px); }
 
 .btn-secondary { background: white; color: var(--gray-700); border: 1.5px solid var(--gray-300); }
 .btn-secondary:hover { background: var(--gray-50); border-color: var(--gray-400); }
@@ -723,10 +751,13 @@ body {
 
 /* ============ 测试模式 ============ */
 .exam-setup {
-  background: white;
+  background: rgba(255,255,255,0.9);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
   border-radius: var(--radius);
   padding: 20px;
   box-shadow: var(--shadow);
+  border: 1px solid rgba(99,102,241,0.04);
 }
 
 .exam-setup h2 { font-size: 20px; font-weight: 800; margin-bottom: 6px; }
@@ -741,10 +772,10 @@ body {
 
 .exam-subject-card {
   border: 2px solid var(--gray-200);
-  border-radius: 10px;
+  border-radius: var(--radius);
   padding: 14px;
   cursor: pointer;
-  transition: all 0.15s;
+  transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
   text-align: center;
   /* 移动端触控优化 */
   -webkit-tap-highlight-color: transparent;
@@ -754,6 +785,7 @@ body {
 .exam-subject-card.selected {
   border-color: var(--primary);
   background: var(--primary-light);
+  box-shadow: var(--shadow-glow);
 }
 
 .exam-subject-card .subject-icon { font-size: 28px; margin-bottom: 6px; }
@@ -768,18 +800,24 @@ body {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  background: white;
+  background: rgba(255,255,255,0.9);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
   border-radius: var(--radius);
   padding: 12px 16px;
   margin-bottom: 12px;
   box-shadow: var(--shadow);
+  border: 1px solid rgba(99,102,241,0.04);
 }
 
 .timer-display {
   font-size: 28px;
   font-weight: 800;
   font-variant-numeric: tabular-nums;
-  color: var(--primary);
+  background: var(--primary-gradient);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
 }
 
 .timer-display.warning { color: var(--warning); }
@@ -795,7 +833,7 @@ body {
 
 .exam-progress-fill {
   height: 100%;
-  background: linear-gradient(90deg, var(--primary), #60a5fa);
+  background: linear-gradient(90deg, #6366f1, #a78bfa);
   border-radius: 4px;
   transition: width 0.3s ease;
 }
@@ -809,20 +847,22 @@ body {
 }
 
 .wrong-q-item {
-  background: white;
+  background: rgba(255,255,255,0.9);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
   border-radius: var(--radius);
   padding: 14px;
   box-shadow: var(--shadow);
   margin-bottom: 10px;
   border-left: 4px solid var(--danger);
   cursor: pointer;
-  transition: all 0.15s;
+  transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
   /* 移动端触控优化 */
   -webkit-tap-highlight-color: transparent;
   touch-action: manipulation;
 }
 
-.wrong-q-item:hover { box-shadow: var(--shadow-md); transform: translateY(-1px); }
+.wrong-q-item:hover { box-shadow: var(--shadow-md), var(--shadow-glow); transform: translateY(-2px); }
 
 .wrong-q-text {
   font-size: 14px;
@@ -849,21 +889,21 @@ body {
   gap: 3px;
 }
 
-.tag-danger { background: var(--danger-light); color: var(--danger); }
-.tag-warning { background: var(--warning-light); color: var(--warning); }
-.tag-primary { background: var(--primary-light); color: var(--primary-dark); }
-.tag-success { background: var(--success-light); color: var(--success); }
+.tag-danger { background: #fff1f2; color: #f43f5e; }
+.tag-warning { background: #fffbeb; color: #f59e0b; }
+.tag-primary { background: #eef2ff; color: #4f46e5; }
+.tag-success { background: #ecfdf5; color: #10b981; }
 .tag-gray { background: var(--gray-100); color: var(--gray-600); }
 
 .wrong-analysis {
   margin-top: 10px;
   padding: 10px 12px;
-  background: #fff7ed;
-  border-radius: 8px;
+  background: linear-gradient(135deg, #fffbeb, #fef3c7);
+  border-radius: var(--radius-sm);
   font-size: 13px;
   color: var(--gray-700);
   line-height: 1.6;
-  border: 1px solid #fed7aa;
+  border: 1px solid rgba(245,158,11,0.2);
   display: none;
 }
 
@@ -878,11 +918,14 @@ body {
 }
 
 .ai-stat-card {
-  background: white;
+  background: rgba(255,255,255,0.9);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
   border-radius: var(--radius);
   padding: 12px;
   text-align: center;
   box-shadow: var(--shadow);
+  border: 1px solid rgba(99,102,241,0.04);
 }
 
 .ai-stat-num { font-size: 22px; font-weight: 800; }
@@ -932,9 +975,9 @@ body {
   transition: width 0.8s ease;
 }
 
-.gauge-pass { background: linear-gradient(90deg, var(--success), #4ade80); }
-.gauge-danger { background: linear-gradient(90deg, var(--danger), #f87171); }
-.gauge-warning { background: linear-gradient(90deg, var(--warning), #fcd34d); }
+.gauge-pass { background: linear-gradient(90deg, #10b981, #6ee7b7); }
+.gauge-danger { background: linear-gradient(90deg, #f43f5e, #fb7185); }
+.gauge-warning { background: linear-gradient(90deg, #f59e0b, #fcd34d); }
 
 .knowledge-weak-list { list-style: none; }
 
@@ -954,18 +997,18 @@ body {
 .weak-count { font-size: 12px; color: var(--danger); font-weight: 700; flex-shrink: 0; }
 
 .ai-summary-box {
-  background: linear-gradient(135deg, #eff6ff, #f0fdf4);
+  background: linear-gradient(135deg, #eef2ff, #faf5ff, #fdf2f8);
   border-radius: var(--radius);
   padding: 16px;
   box-shadow: var(--shadow);
   margin-bottom: 12px;
-  border: 1px solid #bfdbfe;
+  border: 1px solid rgba(99,102,241,0.1);
 }
 
 .ai-summary-title {
   font-size: 15px;
   font-weight: 700;
-  color: var(--primary-dark);
+  color: #4f46e5;
   margin-bottom: 10px;
   display: flex;
   align-items: center;
@@ -993,14 +1036,16 @@ body {
 .modal-overlay.show { display: flex; }
 
 .modal {
-  background: white;
-  border-radius: 16px 16px 0 0; /* 移动端底部圆角 */
+  background: rgba(255,255,255,0.95);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-radius: 20px 20px 0 0; /* 移动端底部圆角 */
   padding: 24px;
   padding-bottom: max(24px, env(safe-area-inset-bottom)); /* 底部安全区域 */
   max-width: 480px;
   width: 100%;
   box-shadow: var(--shadow-lg);
-  animation: modalIn 0.3s ease;
+  animation: modalIn 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
   max-height: 85vh; /* 移动端留顶部空间 */
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
@@ -1013,8 +1058,8 @@ body {
 
 /* ============ 成绩报告 ============ */
 .result-subject {
-  background: white;
-  border-radius: 10px;
+  background: rgba(255,255,255,0.9);
+  border-radius: var(--radius-sm);
   padding: 14px;
   margin-bottom: 10px;
   border-left: 4px solid var(--gray-300);
@@ -1051,10 +1096,10 @@ body {
   top: 70px;
   left: 50%;
   transform: translateX(-50%) translateY(-20px);
-  background: var(--gray-800);
+  background: var(--primary-gradient);
   color: white;
   padding: 10px 20px;
-  border-radius: 20px;
+  border-radius: var(--radius-full);
   font-size: 14px;
   font-weight: 600;
   z-index: 300;
@@ -1137,7 +1182,7 @@ body {
     border-right: 1px solid var(--gray-200);
     padding-bottom: 0;
     padding-top: 16px;
-    box-shadow: 2px 0 10px rgba(0,0,0,0.06);
+    box-shadow: 2px 0 20px rgba(99,102,241,0.06);
     justify-content: flex-start;
     gap: 4px;
   }
@@ -1177,7 +1222,7 @@ body {
   .options-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 10px; }
 
   /* 桌面端模态框放宽 + 居中 */
-  .modal { max-width: 600px; border-radius: 16px; }
+  .modal { max-width: 600px; border-radius: 20px; }
   .modal-overlay { align-items: center; padding: 20px; }
 
   /* 桌面端底部版权不需要额外padding（已无底部tab） */
@@ -1208,7 +1253,8 @@ body {
 .unit-chip.active {
   border-color: var(--primary);
   background: var(--primary-light);
-  color: var(--primary-dark);
+  color: #4f46e5;
+  box-shadow: 0 2px 8px rgba(99,102,241,0.15);
 }
 
 /* ============ 滚动美化 ============ */
@@ -1227,7 +1273,7 @@ body {
   width: 100%;
   padding: 10px 14px;
   border: 2px solid var(--gray-200);
-  border-radius: 8px;
+  border-radius: var(--radius-sm);
   font-size: 16px; /* 移动端 16px 防止 iOS Safari 自动缩放 */
   font-family: inherit;
   outline: none;
@@ -1257,7 +1303,10 @@ textarea.api-input {
 .section-title {
   font-size: 17px;
   font-weight: 800;
-  color: var(--gray-800);
+  background: var(--primary-gradient);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
   margin-bottom: 12px;
   display: flex;
   align-items: center;
@@ -1266,8 +1315,8 @@ textarea.api-input {
 
 /* 刷题进度恢复 banner */
 .drill-resume {
-  background: linear-gradient(135deg, #e8f5e9, #f1f8e9);
-  border: 1px solid #a5d6a7;
+  background: linear-gradient(135deg, #ecfdf5, #f0fdf4, #eef2ff);
+  border: 1px solid rgba(16,185,129,0.2);
   border-radius: 12px;
   padding: 14px 16px;
   margin-bottom: 16px;
@@ -1352,18 +1401,18 @@ textarea.api-input {
 
 .mode-card {
   border: 2px solid var(--gray-200);
-  border-radius: 10px;
+  border-radius: var(--radius);
   padding: 14px;
   cursor: pointer;
-  transition: all 0.15s;
+  transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
   text-align: center;
-  background: white;
+  background: rgba(255,255,255,0.9);
   /* 移动端触控优化 */
   -webkit-tap-highlight-color: transparent;
   touch-action: manipulation;
 }
 
-.mode-card.selected { border-color: var(--primary); background: var(--primary-light); }
+.mode-card.selected { border-color: var(--primary); background: var(--primary-light); box-shadow: var(--shadow-glow); }
 .mode-card:hover { border-color: var(--primary); }
 
 .mode-icon { font-size: 24px; margin-bottom: 6px; }
@@ -1408,22 +1457,22 @@ textarea.api-input {
 
     <div class="stats-grid">
       <div class="stat-card" onclick="switchTab('drill')">
-        <div class="stat-num" id="stat-total" style="color:#2563eb">785</div>
+        <div class="stat-num" id="stat-total" style="color:#6366f1">785</div>
         <div class="stat-label">题库总题数</div>
         <div class="stat-sub">4科目</div>
       </div>
       <div class="stat-card" onclick="switchTab('drill')">
-        <div class="stat-num" id="stat-done" style="color:#059669">0</div>
+        <div class="stat-num" id="stat-done" style="color:#10b981">0</div>
         <div class="stat-label">已做题数</div>
         <div class="stat-sub" id="stat-done-pct">完成 0%</div>
       </div>
       <div class="stat-card" onclick="switchTab('wrong')">
-        <div class="stat-num" id="stat-wrong" style="color:#dc2626">0</div>
+        <div class="stat-num" id="stat-wrong" style="color:#f43f5e">0</div>
         <div class="stat-label">错题数量</div>
         <div class="stat-sub" id="stat-acc">正确率 --</div>
       </div>
       <div class="stat-card" onclick="switchTab('exam')">
-        <div class="stat-num" id="stat-exams" style="color:#7c3aed">0</div>
+        <div class="stat-num" id="stat-exams" style="color:#8b5cf6">0</div>
         <div class="stat-label">完成测试</div>
         <div class="stat-sub">模拟考试</div>
       </div>
@@ -1557,8 +1606,8 @@ textarea.api-input {
         </div>
 
         <div class="q-body">
-          <div id="drill-case-context" style="display:none;background:#fffbeb;border-left:4px solid #f59e0b;padding:10px 14px;border-radius:0 8px 8px 0;margin-bottom:12px;font-size:13px;color:#78350f;line-height:1.7"></div>
-          <div id="drill-multi-hint" style="display:none;background:#eff6ff;border:1px solid #bfdbfe;padding:6px 12px;border-radius:6px;margin-bottom:8px;font-size:12px;color:#1d4ed8;font-weight:600">📋 多选题（X型题）— 请选择所有正确答案，选完后点击「提交答案」</div>
+          <div id="drill-case-context" style="display:none;background:linear-gradient(90deg,#fffbeb,#fef3c7);border-left:4px solid #f59e0b;padding:10px 14px;border-radius:0 8px 8px 0;margin-bottom:12px;font-size:13px;color:#78350f;line-height:1.7"></div>
+          <div id="drill-multi-hint" style="display:none;background:linear-gradient(90deg,#eef2ff,#faf5ff);border:1px solid rgba(99,102,241,0.15);padding:6px 12px;border-radius:8px;margin-bottom:8px;font-size:12px;color:#4f46e5;font-weight:600">📋 多选题（X型题）— 请选择所有正确答案，选完后点击「提交答案」</div>
           <div class="q-text" id="drill-q-text"></div>
           <div class="options-list" id="drill-options"></div>
           <div id="drill-multi-submit-wrap" style="display:none;margin-top:10px">
@@ -1617,7 +1666,7 @@ textarea.api-input {
           </div>
         </div>
 
-        <div style="background:var(--warning-light);border-radius:10px;padding:12px 14px;margin-bottom:16px;font-size:13px;color:#92400e;border:1px solid #fcd34d">
+        <div style="background:linear-gradient(135deg,#fffbeb,#fef3c7);border-radius:var(--radius-sm);padding:12px 14px;margin-bottom:16px;font-size:13px;color:#92400e;border:1px solid rgba(245,158,11,0.2)">
           ⏱️ <strong>考试说明：</strong>每科随机抽取50题（每题2分，共100分），限时90分钟，60分及格。答题期间不显示答案解析。
         </div>
 
@@ -1644,7 +1693,7 @@ textarea.api-input {
       </div>
 
       <div class="question-card">
-        <div class="q-header" style="background:linear-gradient(135deg,#4c1d95,#7c3aed)">
+        <div class="q-header" style="background:linear-gradient(135deg,#6366f1,#8b5cf6,#a78bfa)">
           <div>
             <div class="q-number" id="exam-q-number">第 1 题</div>
             <div style="font-size:11px;opacity:0.8;margin-top:2px" id="exam-q-subject"></div>
@@ -1653,8 +1702,8 @@ textarea.api-input {
         </div>
 
         <div class="q-body">
-          <div id="exam-case-context" style="display:none;background:#fffbeb;border-left:4px solid #f59e0b;padding:10px 14px;border-radius:0 8px 8px 0;margin-bottom:12px;font-size:13px;color:#78350f;line-height:1.7"></div>
-          <div id="exam-multi-hint" style="display:none;background:#eff6ff;border:1px solid #bfdbfe;padding:6px 12px;border-radius:6px;margin-bottom:8px;font-size:12px;color:#1d4ed8;font-weight:600">📋 多选题（X型题）— 请选择所有正确答案</div>
+          <div id="exam-case-context" style="display:none;background:linear-gradient(90deg,#fffbeb,#fef3c7);border-left:4px solid #f59e0b;padding:10px 14px;border-radius:0 8px 8px 0;margin-bottom:12px;font-size:13px;color:#78350f;line-height:1.7"></div>
+          <div id="exam-multi-hint" style="display:none;background:linear-gradient(90deg,#eef2ff,#faf5ff);border:1px solid rgba(99,102,241,0.15);padding:6px 12px;border-radius:8px;margin-bottom:8px;font-size:12px;color:#4f46e5;font-weight:600">📋 多选题（X型题）— 请选择所有正确答案</div>
           <div class="q-text" id="exam-q-text"></div>
           <div class="options-list" id="exam-options"></div>
         </div>
@@ -1987,7 +2036,7 @@ function switchDBMode(mode) {
   // 更新按钮高亮
   document.querySelectorAll('.db-mode-btn').forEach(btn => {
     const isCurrent = btn.dataset.mode === mode;
-    btn.style.background = isCurrent ? '#2563eb' : 'transparent';
+    btn.style.background = isCurrent ? '#6366f1' : 'transparent';
     btn.style.color = isCurrent ? '#fff' : 'var(--gray-600)';
     btn.classList.toggle('active', isCurrent);
   });
@@ -2121,7 +2170,7 @@ function updateHomeStats() {
   // 更新题库切换按钮样式
   document.querySelectorAll('.db-mode-btn').forEach(btn => {
     const isCurrent = btn.dataset.mode === APP.dbMode;
-    btn.style.background = isCurrent ? '#2563eb' : 'transparent';
+    btn.style.background = isCurrent ? '#6366f1' : 'transparent';
     btn.style.color = isCurrent ? '#fff' : 'var(--gray-600)';
     btn.classList.toggle('active', isCurrent);
   });
@@ -2672,10 +2721,10 @@ function showDrillAllDonePrompt() {
   tip.style.cssText = 'margin-top:14px;background:linear-gradient(135deg,#e8f5e9,#f1f8e9);border:1.5px solid #a5d6a7;border-radius:12px;padding:16px;text-align:center';
   tip.innerHTML = `
     <div style="font-size:22px;margin-bottom:6px">🎉</div>
-    <div style="font-size:15px;font-weight:700;color:#2e7d32;margin-bottom:4px">
+    <div style="font-size:15px;font-weight:700;color:#10b981;margin-bottom:4px">
       ${subjectLabel}${unitLabel} 已全部刷完！
     </div>
-    <div style="font-size:12px;color:#558b2f;margin-bottom:14px">
+    <div style="font-size:12px;color:#059669;margin-bottom:14px">
       当前模式：${modeLabel}。<br>点击下方按钮可清空本次刷题记录，重新从头开始练习。
     </div>
     <button class="btn btn-primary" onclick="restartDrillFromScratch()" style="width:100%;margin-bottom:8px">
@@ -3350,7 +3399,7 @@ function generateWrongAnalysis(q, userAnswer, hist) {
     const getOptText = (k) => escapeHtml(q.options?.find(o => o.key === k)?.text?.substring(0, 25) || '');
 
     if (missed.length > 0) {
-      analysis += `<span style="color:#dc2626">漏选</span>了：${missed.map(k => `${k}（${getOptText(k)}…）`).join('、')}；`;
+      analysis += `<span style="color:#f43f5e">漏选</span>了：${missed.map(k => `${k}（${getOptText(k)}…）`).join('、')}；`;
     }
     if (extra.length > 0) {
       analysis += `<span style="color:#d97706">错选</span>了：${extra.map(k => `${k}（${getOptText(k)}…）`).join('、')}；`;
