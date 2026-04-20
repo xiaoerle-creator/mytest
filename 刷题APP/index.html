@@ -1120,7 +1120,7 @@ body {
 .tab-item { min-height: 50px; }
 .unit-chip { min-height: 36px; padding: 6px 14px; }
 .subject-btn { min-height: 40px; }
-.option-item { min-height: 52px; padding: 14px; }
+.option-item { min-height: 52px; }
 .exam-subject-card { min-height: 90px; }
 .mode-card { min-height: 90px; }
 
@@ -1443,7 +1443,7 @@ textarea.api-input {
     <div style="display:flex;gap:8px;margin-bottom:14px;background:var(--gray-100);border-radius:12px;padding:4px">
       <button class="db-mode-btn active" data-mode="platinum"
         onclick="switchDBMode('platinum')"
-        style="flex:1;padding:8px 4px;border:none;border-radius:9px;font-size:13px;font-weight:600;cursor:pointer;transition:all .2s;background:#2563eb;color:#fff">
+        style="flex:1;padding:8px 4px;border:none;border-radius:9px;font-size:13px;font-weight:600;cursor:pointer;transition:all .2s;background:#6366f1;color:#fff">
         📘 白金卷 <span id="db-badge-platinum" style="font-size:11px;font-weight:400;opacity:.85">785题</span>
       </button>
       <button class="db-mode-btn" data-mode="dingxin"
@@ -1819,7 +1819,7 @@ textarea.api-input {
         <div style="margin-bottom:16px">
           <div style="font-size:14px;font-weight:700;color:var(--gray-800);margin-bottom:6px">☁️ 云端自动同步</div>
           <div style="font-size:12px;color:var(--gray-500);margin-bottom:10px;line-height:1.6">
-            使用 JSONBin.io 同步数据。已预置账号，打开APP自动拉取，答题后自动上传。
+            使用 JSONBin.io 同步数据。配置后打开APP自动拉取，答题后自动上传。
           </div>
           <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px">
             <button class="btn btn-primary btn-sm" onclick="manualSyncNow()">🔄 立即同步</button>
@@ -1830,7 +1830,7 @@ textarea.api-input {
           <!-- 云端同步配置（折叠） -->
           <div id="sync-config-panel" style="display:none;margin-top:12px;background:var(--gray-50);border-radius:8px;padding:12px;border:1px solid var(--gray-200)">
             <div style="font-size:12px;color:var(--gray-600);margin-bottom:10px;line-height:1.7">
-              使用 <strong>JSONBin.io</strong> 进行云同步，已预置 API Key 和 Bin ID，无需额外配置。
+              使用 <strong>JSONBin.io</strong> 进行云同步。首次使用请在设置中填写 Bin ID 和 API Key。
             </div>
             <div id="sync-config-status" style="margin-top:8px;font-size:12px;color:var(--gray-500)"></div>
           </div>
@@ -3195,7 +3195,7 @@ function renderAnswerSheet() {
     const ans = APP.examAnswers[q.id];
     const isAnswered = ans && ans.length > 0;
     const isCurrent = i === APP.examIndex;
-    const bg = isAnswered ? '#2563eb' : (isCurrent ? '#fbbf24' : '#f3f4f6');
+    const bg = isAnswered ? '#6366f1' : (isCurrent ? '#fbbf24' : '#f3f4f6');
     const color = isAnswered ? 'white' : (isCurrent ? 'white' : '#6b7280');
     return `<div onclick="goToExamQuestion(${i})"
       style="width:32px;height:32px;border-radius:6px;display:flex;align-items:center;justify-content:center;
@@ -3357,7 +3357,7 @@ function renderWrongList() {
     const analysis = generateWrongAnalysis(q, userAns, hist);
 
     return `<div class="wrong-q-item" onclick="toggleWrongAnalysis(this, '${escapeHtml(q.id)}')">
-      <div class="wrong-q-text">${idx+1}. ${q.isMulti ? '<span style="background:#dbeafe;color:#1d4ed8;padding:1px 6px;border-radius:4px;font-size:11px;margin-right:4px">多选</span>' : ''}${escapeHtml(q.question)}</div>
+      <div class="wrong-q-text">${idx+1}. ${q.isMulti ? '<span style="background:#eef2ff;color:#4f46e5;padding:1px 6px;border-radius:4px;font-size:11px;margin-right:4px">多选</span>' : ''}${escapeHtml(q.question)}</div>
       <div class="wrong-q-meta">
         <span class="tag tag-gray">${escapeHtml(q.subject)}</span>
         <span class="tag tag-gray">${escapeHtml(q.unit)}</span>
