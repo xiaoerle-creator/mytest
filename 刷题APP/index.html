@@ -1865,8 +1865,8 @@ textarea.api-input {
   </div>
 
   <div class="app-footer">
-    Made with ❤️ by <strong>Eric Siew</strong> (萧而乐) · 口腔医学中级刷题APP v4.0<br>
-    © 2026 Eric Siew. All rights reserved.
+    口腔医学中级刷题APP v4.0<br>
+    © 2026 主治必过. All rights reserved.
   </div>
 
 </div><!-- /main-content -->
@@ -1919,7 +1919,7 @@ textarea.api-input {
 <script>
 // ============================================================
 //  口腔医学中级刷题APP v4.0
-//  作者：Eric Siew (萧而乐)
+
 //  更新：2026-04-08（全量六板块扩展 + 桌面端适配优化）
 // ============================================================
 
@@ -3777,14 +3777,14 @@ function updateAIType() {
 // ========== 数据同步（JSONBin.io — 免费 CORS 支持）==========
 const JSONBIN_API = 'https://api.jsonbin.io/v3';
 const JSONBIN_BIN_NAME = 'zhuzhibiguo-sync';
-const JSONBIN_API_KEY = '$2a$10$OpuDazWjrN3AYKcG9kK01.eW0UZNFElG2u5L8BAxdM3a/uURZEu8S';
-const JSONBIN_BIN_ID = '69d311b936566621a8819078';
+const JSONBIN_API_KEY = '';
+const JSONBIN_BIN_ID = '';
 
 // 获取同步配置
 function getSyncConfig() {
   return DB.get('syncConfig', {
-    binId: JSONBIN_BIN_ID,
-    enabled: true
+    binId: '',
+    enabled: false
   });
 }
 
@@ -3863,7 +3863,12 @@ function toggleSyncConfigPanel() {
 function updateSyncConfigStatus() {
   const statusEl = document.getElementById('sync-config-status');
   if (!statusEl) return;
-  statusEl.innerHTML = '<span style="color:var(--success)">✅ 已预置 · Bin: ' + JSONBIN_BIN_ID.substring(0, 8) + '...</span>';
+  const _cfg = getSyncConfig();
+  if (_cfg && _cfg.binId) {
+    statusEl.innerHTML = '<span style="color:var(--success)">✅ 已配置 · Bin: ' + _cfg.binId.substring(0, 8) + '...</span>';
+  } else {
+    statusEl.innerHTML = '<span style="color:var(--warning)">⚠️ 未配置云同步，进入设置填写 Bin ID 和 Key</span>';
+  }
 }
 
 // 同步状态
